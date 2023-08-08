@@ -2,7 +2,27 @@ from render_article import render_article
 from render_code import render_code
 from render_template import render_template
 
-def render_winter_dev_article(template_text: str, article_text: str) -> str:
+def top(io, _):
+	io.write('''
+		<div class="top">
+			<h1 class="title">Winter</h1>
+			<div class="nav-section">
+				<div class="nav-links">
+					<a class="nav-link" href="/articles">Articles</a>
+					<a class="nav-link" href="/projects">Projects</a>
+					<a class="nav-link" href="/support">Support</a>
+				</div>
+
+				<hr class="nav-separator" />
+
+				<div class="nav-buttons">
+					<p class="fake-href" onclick="toggleDark();">0</p>
+				</div>
+			</div>
+		</div>
+	''')
+
+def render_winter_dev_single_article(template_text: str, article_text: str) -> str:
 	def title(io, text):
 		io.write(f'<h1 class="page-title">{text}</h1>')
 
@@ -44,7 +64,7 @@ def render_winter_dev_article(template_text: str, article_text: str) -> str:
 		# here is example js code const id = props.src.substring(props.src.lastIndexOf('/') + 1, props.src.indexOf('?'));
 
 		youtube_id = src[src.rfind('/') + 1:src.find('?')]
-		thumbnail_url = f'/thumbnails/{youtube_id}.jpg'
+		thumbnail_url = f'../thumbnails/{youtube_id}.jpg'
 		iframe_src = f'https://www.youtube.com/embed/{youtube_id}?rel=0&modestbranding=1&autoplay=1'
 
 		io.write(f'''
@@ -87,15 +107,24 @@ def render_winter_dev_article(template_text: str, article_text: str) -> str:
 
 	blocks, meta = render_article(article_text, article_funcs)
 
-	def put(io, what):
-		if what == "title":
-			io.write(meta["title"])
-		elif what == "article":
-			for block in blocks:
-				io.write(block)
+	def title(io, _):
+		io.write(meta["title"])
+	
+	def article(io, _):
+		for block in blocks:
+			io.write(block)
 
 	template_funcs = {
-		"put": put
+		"title": title,
+		"article": article,
+		"top": top
+	}
+
+	return render_template(template_text, template_funcs)
+
+def render_winter_dev_article_list(template_text: str) -> str:
+	template_funcs = {
+		"top": top
 	}
 
 	return render_template(template_text, template_funcs)
