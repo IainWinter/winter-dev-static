@@ -1,0 +1,36 @@
+<html lang="en">
+
+<head>
+	<title>Articles</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" type="image/x-icon" href="/favicon.ico">
+	<link rel="stylesheet" href="/styles/global.css" />
+	<link rel="stylesheet" href="/styles/top.css" />
+</head>
+
+<script src="/scripts/no_flashbang.js"></script>
+
+<body color-theme="dark">
+	<div class="main">
+		[top]()
+		<div class="page">
+		</div>
+	</div>
+
+	<script>
+		function swapIframe(img, iframeSrc) {
+			// swap img for an iframe with its source set to iframeSrc
+			// this is used to swap the thumbnail for a youtube embed
+
+			var iframe = document.createElement("iframe");
+			iframe.classList = "article-embed";
+			iframe.src = iframeSrc;
+
+			img.parentNode.appendChild(iframe);
+			iframe.after(img);
+			img.remove();
+		}
+	</script>
+</body>
+
+</html>

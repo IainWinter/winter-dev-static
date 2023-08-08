@@ -19,7 +19,7 @@ In 2D this is easy, we can just add the point and the edges remain intact. In 3D
 
 I'm going to venture into a little [link](p5.js, https://p5js.org/) for the 2D version because I've made a small demo with it that you can check out in fullscreen [link](here, ./articles/gjk-algorithm/app/demo.html).
 
-[iframe](./articles/gjk-algorithm/app/demo.html)
+[iframe](/articles/gjk-algorithm/app/demo.html)
 
 We'll start with a function that takes in the simplex from GJK and the two shapes that we are testing.
 

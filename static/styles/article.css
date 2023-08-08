@@ -1,0 +1,128 @@
+.article-subtitle {
+	font-size: 32px;
+}
+
+.article-subtitle-id-link {
+	opacity: .3;
+	margin-left: 1rem;
+	text-decoration: none;
+}
+
+.article-subtitle-id-link:hover {
+	opacity: .9;
+}
+
+.article-code {
+	font-size: 16px;
+	font-weight: 400;
+}
+
+.article-code-text {
+	margin: 0;
+	padding-bottom: 1em;
+	overflow-x: auto;
+
+	tab-size: 5;
+}
+
+.article-code-text::-webkit-scrollbar {
+	display: none;
+}
+
+.article-code-file {
+	padding: 10px;
+	margin-bottom: 10px;
+	background: var(--accent-color-light);
+}
+
+.article-embed {
+	border: none;
+
+	width: 100%;
+	aspect-ratio: auto 16 / 9;
+
+	position: relative;
+
+	margin: 0 auto;
+	display: block;
+}
+
+.article-embed-half {
+	width: 55%;
+}
+
+.article-embed-thumb {
+	cursor: pointer;
+	width: 100%;
+	height: 100%;
+}
+
+.article-embed-thumb-wrap {
+	position: relative;
+}
+
+.article-embed-thumb-wrap:after {
+	--size_x: 68px;
+	--size_y: 48px;
+
+	content: "";
+	background-image: url("/yt.svg");
+
+	left: 15px;
+	bottom: 20px;
+
+	z-index: 2;
+	pointer-events: none;
+	position: absolute;
+
+	width: var(--size_x);
+	height: var(--size_y);
+}
+
+.article-embed-svg-hack {
+	width: unset;
+	display: block;
+	background: var(--accent-color);
+	padding: 10px;
+}
+
+.math {
+	color: var(--text-color);
+}
+
+.math-inline {
+	font-size: 16px;
+}
+
+.math-display {
+	font-size: 22px;
+}
+
+.text-heavy {
+	font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+	.article {
+		padding-left: var(--pad);
+	}
+}
+
+@media (max-width: 500px) {
+	.math-display {
+		font-size: 5vw;
+	}
+}
+
+.comment-frame {
+	overflow: hidden;
+	border: none;
+
+	/* allow for the same styling as the page headers for commenters
+		this needs negitive space */
+
+	--padding: 15px;
+
+	width: calc(100% + var(--padding));
+	margin-left: calc(0px - var(--padding));
+}
