@@ -1,0 +1,141 @@
+.top {
+	height: 100vh;
+	width: fit-content;
+	max-width: 360px;
+	flex-direction: column;
+	display: flex;
+	user-select: none;
+
+	margin-left: var(--pad);
+}
+
+.title {
+	margin-top: var(--pad);
+	font-size: 72px;
+}
+
+.nav-section {
+	margin: auto 0 var(--pad) 0;
+	font-size: 42px;
+	text-align: center;
+
+	pointer-events: none;
+}
+
+.nav-link {
+	display: block;
+	text-decoration: none;
+	transition: var(--ease-time) ease opacity, var(--ease-time) ease visibility;
+
+	color: var(--text-color);
+	pointer-events: auto;
+}
+
+.nav-buttons {
+	font-size: 36px;
+
+	color: var(--text-color);
+	pointer-events: auto;
+}
+
+.nav-buttons>* {
+	cursor: pointer;
+}
+
+.nav-links:hover>* {
+	opacity: .3;
+}
+
+.nav-link:hover {
+	opacity: 1;
+}
+
+.nav-separator {
+	width: 33%;
+	border: none;
+	border-top: 1px solid var(--accent-color);
+	opacity: 1 !important;
+}
+
+.nav-dark-mode-toggle {
+	width: 50px;
+	height: 50px;
+	background-color: black;
+	border-radius: 100%;
+}
+
+@media (max-width: 1200px) {
+	.top {
+		height: unset;
+		width: 100%;
+		max-width: unset;
+		margin: 0;
+	}
+
+	.nav-section {
+		width: 80%;
+		max-width: 400px;
+		margin: 0 auto;
+
+		font-size: 24px;
+		position: relative;
+
+		margin-bottom: calc(var(--img-pad) * 3);
+
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.nav-section:after {
+		content: "";
+		background: url("/mark.png");
+		background-size: cover;
+		image-rendering: pixelated;
+		width: var(--img-pad);
+		height: var(--img-pad);
+		position: absolute;
+		bottom: calc(0px - var(--img-pad) * 2);
+		left: calc(50% - var(--img-pad) / 2);
+
+		pointer-events: none;
+	}
+
+	.nav-links {
+		width: 80%;
+		display: flex;
+		justify-content: space-between;
+	}
+
+	.nav-link {
+		margin: auto 0;
+	}
+
+	.nav-buttons {
+		display: flex;
+	}
+
+	.nav-buttons>* {
+		margin: auto 0;
+		display: block;
+		font-size: 28px;
+	}
+
+	.nav-separator {
+		margin: 0;
+		width: 1px;
+		border: none;
+		border-left: 1px solid var(--accent-color);
+	}
+}
+
+@media (max-width: 460px) {
+	.nav-links {
+		font-size: 20px;
+	}
+}
+
+@media (max-width: 300px) {
+	.nav-links {
+		flex-direction: column;
+	}
+}

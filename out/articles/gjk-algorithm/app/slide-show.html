@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>a</title>
+</head>
+<body style="user-select: none;">	
+	<!-- <svg id="svg" width="100%" height="100%" viewbox="-500 -500 1000 1000" style="padding: 5px; font-family: Arial; font-size: 24px"></svg> -->
+
+	<!-- <script src="d3.min.js"></script> -->
+	<script src="d3-polygon.min.js"></script>
+	<!-- <script src="https://d3js.org/d3-dispatch.v1.min.js"></script> -->
+	<!-- <script src="https://d3js.org/d3-selection.v1.min.js"></script> -->
+	<!-- <script src="https://d3js.org/d3-drag.v1.min.js"></script> -->
+	<script type="text/javascript" src="p5.min.js"></script>
+	<!-- <script type="text/javascript" src="p5.svg.js"></script> -->
+<script>
+	function dottedLine(x, y, ex, ey, d = 4) {
+		let distance = sqrt((ex-x)*(ex-x) + (ey-y)*(ey-y)); 
+
+		for (let i = 0.0; i <= distance; i += d) {
+		  let mx = lerp(x, ex, i / distance);
+		  let my = lerp(y, ey, i / distance);
+		  point(mx, my);
+		}
+	}
+
+	function drawTest(x, y, vx, vy, n = "") {
+		let d = sqrt(vx*vx+vy*vy);
+
+		let v = new Vector(x, y, vx/d*100, vy/d*100, n);
+		v.draw();
+
+		strokeWeight(4);
+		stroke(255, 100, 100);
+
+		dottedLine(x, y, -vy*100,  vx*100, 6);
+		dottedLine(x, y,  vy*100, -vx*100, 6);
+	}
+
+	class Shape {
+		constructor() {
+			this.o = 255;
+			this.t = 255;
+			this.c = 230; // color grey
+		}
+
+		hidenow() {this.t = this.o = 0;}
+		hide() { this.t = 0; }
+		show() { this.t = 255; }
+
+		draw() {
+			this.o = lerp(this.o, this.t, 0.1);
+			
+			if(this.mydraw !== undefined) {
+				this.mydraw();	
+			}
+		}
+	}
+
+	class Line extends Shape {
+		constructor(x = 0, y = 0, vx = 100, vy = 0) {
+			super();
+			this.x = x;
+			this.y = y;
+			this.vx = vx;
+			this.vy = vy;
+			this.o1 = 128;
+			this.t1 = 128;
+		}
+
+		mydraw() {
+			noFill();
+			stroke(this.c, this.o);
+			strokeWeight(1);
+
+			let fx = this.x + this.vx;
+			let fy = this.y + this.vy;
+			let d  = sqrt(this.vx*this.vx+this.vy*this.vy);
+
+			push();
+				translate(this.x, this.y);
+				rotate(atan2(this.vy, this.vx));
+				
+				fill(50, 50, 200, (this.o * 128)/255);
+				rect(0, -1000, -1000, 2000);
+
+				fill(50, 200, 50, (this.o * 128)/255);
+				rect(0, -1000, d, 2000);
+
+				translate(d, 0);
+
+				fill(200, 50, 50, this.o1);
+				rect(0, -1000, 1000, 2000);
+			pop();
+
+			noStroke();
+			fill(230, this.o);
+
+			ellipse(fx, fy, 7, 7);
+			ellipse(this.x, this.y, 7, 7);
+
+			push();
+				scale(1, -1);
+				text("A", this.x - 10, -this.y - 10);
+				text("B", fx - 10, -fy - 10);
+			pop();
+
+			stroke(230, this.o);
+			line(this.x, this.y, this.x + this.vx, this.y + this.vy);
+
+			// let ax = (this.x + this.vx)/2;
+			// let ay = (this.y + this.vy)/2;
+
+			// push();
+			// 	scale(1, -1);
+
+			// 	fill(48, this.o);
+			// 	stroke(this.c, this.o);
+			// 	strokeWeight(.5);
+			// 	rect(this.x - ax - 26, this.y + ay - 15, 20, -20);
+			// 	rect(this.x + ax - 26, this.y - ay - 15, 20, -20);
+
+			// 	fill(this.c, this.o);
+			// 	noStroke();
+			// 	text("1", this.x - ax - 20, this.y + ay - 20);
+			// 	text("2", this.x + ax - 20, this.y - ay - 20);
+			// pop();
+
+			this.o1 = lerp(this.o1, this.t1, 0.1);
+		}
+
+		hideImpossibleRegions() {
+			this.t1 = 0;
+		}
+
+		hideImpossibleRegionsNow() {
+			this.t1 = 0;
+			this.o1 = 0;
+		}
+
+		showTest1() {
+			drawTest(this.x, this.y, this.vx, this.vy, "AB");
+		}
+	}
+
+	class Triangle extends Shape {
+		constructor(x = 0, y = 0, x1 = 100, y1 = 0, x2 = 0, y2 = 50) {
+			super();
+			this.x = x;
+			this.y = y;
+			this.x1 = x1;
+			this.y1 = y1;
+			this.x2 = x2;
+			this.y2 = y2;
+			this.o1 = 128;
+			this.t1 = 128;
+		}
+
+		mydraw() {
+			noFill();
+			stroke(this.c, this.o);
+			strokeWeight(1);
+
+			let hideimp = (this.o * this.o1)/255;
+
+			let bx = this.x + this.x1;
+			let by = this.y + this.y1;
+
+			let cx = this.x + this.x2;
+			let cy = this.y + this.y2;
+
+			let dab = sqrt(this.x1*this.x1 + this.y1*this.y1);
+			let dac = sqrt(this.x2*this.x2 + this.y2* this.y2);
+
+			fill(0, 200, 200, (this.o * 128)/255);
+			push()
+				translate(this.x, this.y);
+				beginShape();
+					vertex(0, 0);
+					vertex(this.x1, this.y1);
+					vertex(this.x1+(bx-cx)*10, this.y1+(by-cy)*10);
+					vertex(-this.x2*10, -this.y2*10);
+				endShape(CLOSE);
+			pop();
+			
+			fill(50, 50, 200, (this.o * 128)/255);	
+			push();
+				translate(this.x, this.y);
+				beginShape();
+					vertex(0, 0);
+					vertex(this.x2, this.y2);
+					vertex(this.x2+(cx-bx)*10, this.y2+(cy-by)*10);
+					vertex(-this.x1*10, -this.y1*10);
+				endShape(CLOSE);
+			pop();
+
+			fill(200, 50, 50, hideimp);
+			stroke(this.c, hideimp);
+			push();
+				translate(bx, by);
+				beginShape();
+					vertex(0, 0);
+					vertex(this.x1*10, this.y1*10);
+					vertex(this.x2-this.x1+this.x2*10, this.y2-this.y1+this.y2*10);
+					vertex(this.x2-this.x1, this.y2-this.y1);
+				endShape(CLOSE);
+			pop();
+
+			fill(50, 200, 50, (this.o * 128)/255);
+			stroke(this.c, this.o);
+			triangle(this.x, this.y, bx, by, cx, cy);
+
+			strokeWeight(.1);
+
+			fill(25, 100, 175, (this.o * 128)/255);
+			push();
+				translate(this.x, this.y);
+				scale(10);
+				triangle(0, 0, -this.x1, -this.y1, -this.x2, -this.y2);
+			pop();
+
+			fill(150, 0, 150, hideimp);
+			stroke(this.c, hideimp);
+			push();
+				translate(cx, cy);
+				scale(10);
+				triangle(0, 0, -this.x1+this.x2, -this.y1+this.y2, this.x2, this.y2);
+			pop();
+
+			fill(200, 200, 0, hideimp);
+			push();
+				translate(bx, by);
+				scale(10);
+				triangle(0, 0, this.x1, this.y1, this.x1-this.x2, this.y1-this.y2);
+			pop();
+
+			fill(this.c, this.o)
+			noStroke();
+
+			ellipse(bx, by, 7, 7);
+			ellipse(cx, cy, 7, 7);
+			ellipse(this.x, this.y, 7, 7);
+
+			push();
+				scale(1, -1);
+				text("A", this.x + 10, -this.y + 10);
+				text("B", bx + 10, -by - 10);
+				text("C", cx + 10, -cy - 10);
+			pop();
+
+			this.o1 = lerp(this.o1, this.t1, 0.1);
+		}
+
+		hideImpossibleRegions() {
+			this.t1 = 0;
+		}
+
+		showTest1() {
+			drawTest((this.x+this.x+this.x2)/2, (this.y+this.y+this.y2)/2, -this.y2, this.x2, "\n\nABC × AC");
+		}
+
+		showTest2() {
+			drawTest(this.x, this.y, this.x2, this.y2, "AC");
+		}
+
+		showTest3() {
+			drawTest(this.x, this.y, this.x1, this.y1, "AB");
+		}
+
+		showTest4() {
+			drawTest((this.x+this.x+this.x1)/2, (this.y+this.y+this.y1)/2, this.y1, -this.x1, "\n\nAB × ABC");
+		}
+	}
+
+	class Polygon extends Shape {
+		constructor(x = 0, y = 0, n = "") {
+			super();
+			this.x = x;
+			this.y = y;
+			this.p = [];
+			this.n = n;
+			this.no = 255;
+			this.nt = 255;
+
+			this.mycenter = createVector(0, 0);
+		}
+
+		mydraw() {
+			noFill()
+			stroke(this.c, this.o);
+			strokeWeight(2);
+
+			for(let i = 0; i < this.p.length; i++) {
+				let j = (i + 1) % this.p.length;
+				line(this.x + this.p[i].x, this.y + this.p[i].y, this.x + this.p[j].x, this.y + this.p[j].y);
+			}
+
+			fill(230, this.o);
+			noStroke();
+
+			for(let i = 0; i < this.p.length; i++) {
+				ellipse(this.x + this.p[i].x, this.y + this.p[i].y, 5, 5);
+			}
+
+			noStroke();
+			fill(this.c, this.no * this.o);
+
+			if(this.mycenter.x == 0) {
+				this.mycenter = this.center();
+			}
+
+			else {
+				this.mycenter.x = lerp(this.mycenter.x, this.center().x, 0.1);
+				this.mycenter.y = lerp(this.mycenter.y, this.center().y, 0.1);
+			}
+
+			push();
+				scale(1, -1);
+				textSize(24);
+				text(this.n, this.mycenter.x - 5, -this.mycenter.y + 5);
+			pop();
+
+			this.no = lerp(this.no, this.nt, 0.1);
+		}
+
+		genVectorList(other) {
+			let vectors = [];
+
+
+			for(let j = 0; j < other.p.length; j++) {
+				for(let i = 0; i < this.p.length; i++) {
+					let v = new Vector(
+						other.x + other.p[j].x,
+						other.y + other.p[j].y,
+						(this.x + this.p[i].x) - (other.x + other.p[j].x),
+						(this.y + this.p[i].y) - (other.y + other.p[j].y)
+					);
+
+					vectors.push(v);
+				}
+			}
+
+			return vectors;
+		}
+
+		genSimpleVectorList(other) {
+			let vectors = [];
+
+			for(let i = 0; i < this.p.length; i++) {
+				let v = new Vector(
+					other.x + other.p[i].x,
+					other.y + other.p[i].y,
+					(this.x + this.p[i].x) - (other.x + other.p[i].x),
+					(this.y + this.p[i].y) - (other.y + other.p[i].y)
+				);
+
+				vectors.push(v);
+			}
+
+			return vectors;
+		}
+
+		genDifference(other) {
+		  	let p = [];
+		  	for(var i = 0; i < this.p.length; i++) {
+				for(var j = 0; j < other.p.length; j++) {
+					p[i + j * this.p.length] = [
+						(this.x + this.p[i].x) - (other.x + other.p[j].x),
+						(this.y + this.p[i].y) - (other.y + other.p[j].y)
+					];
+				}
+			}
+
+			let hull = d3.polygonHull(p);
+
+			let shape = new Polygon(0, 0, this.n + " - " + other.n);
+			for(let i = 0; i < hull.length; i++) {
+				shape.p[i] = createVector(hull[i][0], hull[i][1]);
+			}
+
+			return shape;
+		}
+
+		getFurthestPoint(d) {
+			let point, maxDistance = -Infinity;
+
+			for(let i in this.p) {
+				let p = this.p[i].copy();
+				p.x += this.x; p.y += this.y;
+
+				let distance = p.dot(d);
+				if(distance > maxDistance) {
+					maxDistance = distance;
+					point = p;
+				}
+			}
+
+			return point;
+		}
+
+		center() {
+			let v = createVector(0, 0);
+			for(let i in this.p) {
+				v.x += this.p[i].x;
+				v.y += this.p[i].y;
+			}
+
+			v.x /= this.p.length;
+			v.y /= this.p.length;
+
+			v.x += this.x;
+			v.y += this.y;
+
+			return v;
+		}
+
+		showName() {
+			this.nt = 255;
+		}
+
+		hideName() {
+			this.nt = 0;
+		}
+	}
+
+	function CreateSquare(x = 0, y = 0, n = "") {
+		let shape = new Polygon(x, y, n);
+
+		shape.p = [createVector(-50,  50),
+				   createVector(-50, -50),
+				   createVector( 50, -50),
+				   createVector( 50,  50)];
+
+		return shape;
+	}
+
+	function CreateTriangle(x = 0, y = 0, r = 0, n = "") {
+		let shape = new Polygon(x, y, n);
+
+		shape.p = [createVector(-50, -50).rotate(r),
+				   createVector(  0,  50).rotate(r),
+				   createVector( 50, -50).rotate(r)];
+
+		return shape;
+	}
+
+	function CreateDemo1(x = 0, y = 0) {
+	  let shape = new Polygon(x, y, "A");
+	  shape.p = [createVector(-50, -50, 0),
+			     createVector( 50, -50, 0),
+			     createVector( 40,   0, 0),
+	             createVector(-20,  30, 0),
+	             createVector(-60, -10, 0)];
+
+	  return shape;
+	}
+
+	function CreateDemo2(x = 0, y = 0) {
+	  let shape = new Polygon(x, y, "B");
+	  shape.p = [createVector(-50, -50, 0),
+			     createVector( 50, -30, 0),
+			     createVector( 90,   0, 0),
+	             createVector( 60,  30, 0),
+	             createVector(-40,  30, 0)];
+
+	  return shape;
+	}
+
+	class Circle extends Shape {
+		constructor(x = 0, y = 0, r = 100, n = "S") {
+			super();
+			this.x = x;
+			this.y = y;
+			this.r = r;
+			this.n = n;
+		}
+
+		mydraw() {
+			noFill();
+			stroke(this.c, this.o);
+			strokeWeight(2);
+
+			ellipse(this.x, this.y, this.r, this.r);
+
+			let ra = -0.8;
+			let rx = this.x + cos(ra) * this.r / 2;
+			let ry = this.y + sin(ra) * this.r / 2;
+
+			dottedLine(this.x, this.y, rx, ry, 4);
+
+			noStroke();
+			fill(this.c, this.o);
+			
+			let tx =  rx - cos(ra) * this.r / 4;
+			let ty = -ry + sin(ra) * this.r / 4 - 5;
+
+			push();
+				scale(1, -1);
+				textSize(18);
+				text(this.n, this.x + 5, -this.y - 5);
+				text("r", tx, ty);
+				textSize(8);
+				text(this.n, tx + 5, ty + 3);
+			pop();
+
+			ellipse(this.x, this.y, 5, 5);
+		}
+	}
+
+	class Vector extends Shape {
+		constructor(x = 0, y = 0, vx = 100, vy = 100, n = "") {
+			super();
+			this.x  = x;
+			this.y  = y;
+			this.vx = vx;
+			this.vy = vy;
+			this.n = n;
+		}
+
+		mydraw() {
+			strokeWeight(1);
+			stroke(255, 100, 100, this.o);
+			fill  (255, 100, 100, this.o);
+
+			line(this.x, this.y, this.x+this.vx, this.y+this.vy);
+
+			push();
+				translate(this.x, this.y);
+				rotate(atan2(this.vy, this.vx));
+				translate(sqrt(this.vx*this.vx+this.vy*this.vy), 0);
+			  	triangle(0, 0, -10, 5, -10, -5);
+			pop();
+
+			noStroke();
+			push();
+				translate(this.x+this.vx, this.y+this.vy);
+				scale(1, -1);
+				text(this.n, -this.vx/20, -10);
+			pop();
+		}
+	}
+
+	class Grid extends Shape {
+		constructor() {
+			super();
+			this.x = 0;
+			this.y = 0;
+			this.s = 100;
+		}
+
+		mydraw() {
+			stroke(100, this.o);
+			strokeWeight(0.5);
+
+			let wid = width;
+			let hei = height;
+
+			for(let w =  this.s; w <  wid; w += this.s) line(w, -hei, w, hei);
+			for(let w = -this.s; w > -wid; w -= this.s) line(w, -hei, w, hei);
+			for(let h =  this.s; h <  hei; h += this.s) line(-wid, h, wid, h);
+			for(let h = -this.s; h > -hei; h -= this.s) line(-wid, h, wid, h);
+
+			stroke(170, this.o);
+			strokeWeight(1.5);
+
+			line(-wid, 0, wid, 0);
+			line(0, -hei, 0, hei);
+		}
+	}
+
+	let grid;
+
+	// Slide 1
+	let circle1;
+	let circle2;
+	let vector;
+
+	// Slide 2
+	let polygon1;
+	let polygon2;
+	let polygon3;
+	let polygon4;
+	let vectors;
+
+	let frame = 112; let counter = 0; let counter1 = 0;
+	let drawables = [];
+	
+	frame = 0;
+
+	let position, target;
+	let scale_, starget;
+
+	let mode = "2D";
+	let lastMode = mode;
+
+	function setup() {
+		createCanvas(windowWidth, windowHeight, mode);
+		setAttributes('antialias', true);
+
+		grid = new Grid();
+
+		// Slide 1
+		circle1 = new Circle(100, 0, 150,  "A");
+		circle2 = new Circle(-100, 0, 150, "B");
+		vector  = new Vector(-100, 0, 200, 0);
+
+		// Slide 2
+		polygon1 = CreateSquare(150, 150, "A");    polygon1.hidenow();
+		polygon2 = CreateSquare(350,  50, "B"); polygon2.hidenow();
+		vectors  = polygon1.genSimpleVectorList(polygon2);
+
+		position = createVector(0,  0);
+		target   = createVector(0,  0);
+		scale_   = createVector(2, -2);
+		starget  = createVector(2, -2);
+
+		windowResized();
+	}
+
+	function windowResized() 
+	{
+		if(mode != lastMode)
+			createCanvas(windowWidth, windowHeight, mode);
+		else
+	  		resizeCanvas(windowWidth, windowHeight, mode);
+		
+		starget.x = windowWidth / 1280;
+		starget.y = -windowHeight / 720;
+
+		lastMode = mode;
+	}
+
+	function draw() {
+		if(mode === WEBGL) {
+			camera(cos(frameCount / 600 * counter1 / 255) * counter1, sin(frameCount / 600 * counter1 / 255) * counter1, 280, 0, 0, 0, 0, 1 * (255 - counter1) / 255, -1 * counter1 / 255);
+			//camera(0, 0, 200, 0, 0, 0, 0, 1, 0);
+			scale(1, -1, 1);
+		}
+
+		else {
+			translate(width/2 + position.x, height/2 + position.y);
+			scale(scale_.x, scale_.y);
+		}
+
+		position.x = lerp(position.x, target.x, 0.1);
+		position.y = lerp(position.y, target.y, 0.1);
+
+		scale_.x = lerp(scale_.x, starget.x, 0.1);
+		scale_.y = lerp(scale_.y, starget.y, 0.1);
+
+		if(mode == WEBGL) {
+			clear();
+			blendMode(ADD);
+		}
+
+		background(48, 255);
+
+		grid.draw();
+		
+		// if(mode === WEBGL) {
+		// 	translate(0, 0, 100);
+		// }
+
+		for(let d in drawables) {
+			drawables[d].draw();
+		}
+
+		switch(frame) {
+			case 0: 
+				grid.hidenow();
+				vector.hide();
+				drawables.push(circle1);
+				drawables.push(vector);
+				drawables.push(circle2);
+				frame = 11;
+				break;
+			case 11:
+				
+				//frame++;
+				break;
+			case 12:
+				grid.show();
+
+				circle2.x = lerp(circle2.x,   0, 0.1);
+				circle1.x = lerp(circle1.x, 200, 0.1);
+				circle1.y = lerp(circle1.y, 100, 0.1);
+				vector.x  = lerp(vector.x,    0, 0.1);
+				vector.vy = lerp(vector.vy, 100, 0.1);
+				break;
+			case 13:
+				vector.show();
+				break;
+			case 14:
+				circle1.hide();
+				circle2.hide();
+				vector.hide();
+				break;
+			case 15:
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(polygon2);
+				for(let i in vectors) {
+					drawables.push(vectors[i]);
+					vectors[i].hidenow();
+				}
+
+				target.y = 200;
+
+				frame++;
+				break;
+			case 16:
+				polygon1.show();
+				polygon2.show();
+				break;
+			case 17:
+				for(let i in vectors) {
+					vectors[i].show();
+				}
+				break;
+			case 18:
+				for(let i in vectors) {
+					vectors[i].hide();
+				}
+				polygon2.hide();
+				//polygon2.hideName();
+
+				break;
+			case 19:
+				polygon2 = CreateTriangle(350,  50, 0, "B"); polygon2.hidenow();
+				polygon3 = polygon1.genDifference(polygon2);
+				polygon3.hidenow();
+
+				drawables = [];
+				drawables.push(polygon2);
+
+				vectors  = polygon1.genVectorList(polygon2);
+				for(let i in vectors) {
+					vectors[i].hidenow();
+					drawables.push(vectors[i]);
+				}
+				drawables.push(polygon1);
+				drawables.push(polygon3);
+
+				frame++;
+				break;
+			case 20:
+				polygon2.show();
+				break;
+			case 21:
+				for(let i in vectors) {
+					vectors[i].show();
+				}
+				break;
+			case 22:
+				frame = 28;
+				break;
+			case 28:
+				for(let i in vectors) {
+					vectors[i].x = lerp(vectors[i].x, 0, 0.1);
+					vectors[i].y = lerp(vectors[i].y, 0, 0.1);
+				}
+				break;
+			case 29:
+				polygon3.show();
+				counter = 0;
+				break;
+			case 30:
+				polygon2 = CreateTriangle(350 + cos(PI/2 + counter / 60) * 50, 50 + sin(counter / 30) * 50, counter / 360 * PI, "B");
+
+				vectors  = polygon1.genVectorList(polygon2);
+				polygon3.p = polygon1.genDifference(polygon2).p;
+
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(polygon2);
+				for(let i in vectors) {
+					vectors[i].x = vectors[i].y = 0;
+					drawables.push(vectors[i]);
+				}
+				drawables.push(polygon3);
+
+				counter += 1;
+				break;
+			case 31:
+				counter1 = 350;
+				frame++;
+			case 32:
+				polygon2 = CreateTriangle(counter1, counter, counter1 / 360 * PI, "B");
+
+				vectors  = polygon1.genVectorList(polygon2);
+				polygon3.p = polygon1.genDifference(polygon2).p;
+
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(polygon2);
+				for(let i in vectors) {
+					vectors[i].x = vectors[i].y = 0;
+					drawables.push(vectors[i]);
+				}
+				drawables.push(polygon3);
+
+				counter  = lerp(counter,  160, 0.07);
+				counter1 = lerp(counter1, 220, 0.07);
+				break;
+			case 33:
+				vectors[2].hide();
+				vectors[4].hide();
+				vectors[5].hide();
+				vectors[8].hide();
+				vectors[11].hide();
+				break;
+			case 34:
+				//let iii = 5;
+
+				//push();
+					//translate(polygon3.p[iii].x - 10, polygon3.p[iii].y + 20);
+					//scale(1, -1);
+
+					// function printVector(x, y, offset) {
+					// 	textSize(48);
+					// 	text("[", offset, 0);
+
+					// 	textSize(12);
+					// 	text(x, offset+12, -17);
+					// 	text(y, offset+12,  1);
+
+					// 	textSize(48);
+					// 	text("]", offset+28, 0);
+					// }
+
+					// printVector((polygon3.p[iii].x / 100).toFixed(1), (polygon3.p[iii].y / 100).toFixed(1), 0);
+
+					// textSize(24);
+					// text("=", 40, -4);
+
+					// printVector("greatest", "greatest", 52);
+
+					// textSize(24);
+					// text("-", 94, -4);
+
+					// printVector("least", "least", 104);
+
+				//pop();
+				target.x = -4 * polygon3.p[5].x;
+				target.y =  4 * polygon3.p[5].y;
+
+				starget.x =  4;
+				starget.y = -4;
+				break;
+			case 35:
+				polygon1.hide(); polygon1.hideName();
+				polygon2.hide(); polygon2.hideName();
+				polygon3.hide(); polygon3.hideName();
+				for(let i in vectors) {
+					vectors[i].hide();
+				}
+				break;
+			case 36:
+				frame = 112;
+			case 112:
+				drawables = [];
+				polygon1 = CreateDemo1(150, 150);
+				polygon2 = CreateDemo2(350, 100);
+
+				polygon1.hidenow();
+				polygon2.hidenow();
+
+				drawables.push(polygon1);
+				drawables.push(polygon2);
+
+				frame++;
+				break;
+			case 113:
+				target.x = -500;
+				target.y =  200;
+				//starget.x = 4;
+				//starget.y = -4;
+
+				polygon1.show();
+				polygon2.show();
+				polygon1.showName();
+				polygon2.showName();
+
+				break;
+			case 114:
+				let p1 = polygon1.center();
+				let p2 = polygon2.center();
+
+				vectors = [];
+				vectors.push(new Vector(p1.x, p1.y,  100, 0, "D"));
+				vectors.push(new Vector(p2.x, p2.y, -100, 0, "-D"));
+				drawables.unshift(vectors[0]);
+				drawables.unshift(vectors[1]);
+
+				vectors[0].hidenow();
+				vectors[1].hidenow();
+				vectors[0].show();
+				vectors[1].show();
+
+				frame++;
+				break;
+			case 115:
+				counter = 0;
+				break;
+			case 116:
+				counter = lerp(counter, 255, 0.1);
+
+				noStroke();
+				fill(255, 100, 100, counter);
+
+				let p1_ = polygon1.getFurthestPoint(createVector(vectors[0].vx, vectors[0].vy));
+				let p2_ = polygon2.getFurthestPoint(createVector(vectors[1].vx, vectors[1].vy));
+
+				ellipse(p1_.x, p1_.y, 7, 7);
+				ellipse(p2_.x, p2_.y, 7, 7);
+
+				break;
+			case 117:
+				polygon3 = polygon1.genDifference(polygon2);
+				polygon3.hidenow();
+				drawables.push(polygon3);
+
+				counter = 0;
+				frame++;
+
+				break;
+			case 118:
+				frame++;
+				target.x = 0;
+				target.y = 0;
+				starget.x = 1;
+				starget.y = -1;
+				break;
+			case 119:
+				frame++;
+				break;
+			case 122:
+				polygon4 = new Polygon();
+				frame++;
+				break;
+			case 126:
+				polygon2.x =lerp(polygon2.x, 200, 0.1);
+				polygon2.y =lerp(polygon2.y, 90, 0.1);
+				polygon4.hide();
+				polygon3 = polygon1.genDifference(polygon2);
+			case 121:
+			case 123:
+			case 124:
+			case 125:
+			case 127:
+			case 128:
+			case 120:
+				if(frame >= 121) polygon3.hide();
+				else             polygon3.show();
+
+				if(frame >= 127) {
+					polygon4.show();
+				}
+
+				let p1a = polygon1.center();
+				let p2a = polygon2.center();
+				let p3a = polygon3.center();
+
+				if(frame >= 121) {
+					p3a.x = 0;
+					p3a.y = 0;
+				}
+
+				let vx_ = cos(counter < 120 ? 0 : (counter-120) / 60) * 100;
+				let vy_ = sin(counter < 120 ? 0 : (counter-120) / 60) * 100;
+
+				switch(frame) {
+					case 126:
+					case 123:
+						vx_ = 100;
+						vy_ = 0;
+						break;
+					case 127:
+					case 124:
+						vx_ = -polygon4.p[0].x;
+						vy_ = -polygon4.p[0].y;
+						break;
+					case 128:
+					case 125:
+						let ax_ = polygon4.center().x;
+						let ay_ = polygon4.center().y;
+
+						vx_ = -ax_;
+						vy_ = -ay_;
+
+						break;
+				}
+
+				counter += 1;
+
+				let p1a_ = polygon1.getFurthestPoint(createVector( vx_,  vy_));
+				let p2a_ = polygon2.getFurthestPoint(createVector(-vx_, -vy_));
+				let p3a_ = polygon3.getFurthestPoint(createVector( vx_,  vy_));
+
+				switch(frame) {
+					case 126:
+					case 123:
+						polygon4.p[0] = p3a_;
+						break;
+					case 127:
+					case 124:
+						polygon4.p[1] = p3a_;
+						break;
+					case 128:
+						polygon4.p[2] = p3a_;
+						break;
+				}
+
+				if(frame >= 122) {
+					polygon4.draw();
+				}
+
+				noStroke();
+				fill(255, 100, 100);
+
+				ellipse(p1a_.x, p1a_.y, 7, 7);
+				ellipse(p2a_.x, p2a_.y, 7, 7);
+				ellipse(p3a_.x, p3a_.y, 7, 7);
+
+				vectors = [];
+				drawables = [];
+				vectors.push(new Vector(p1a.x, p1a.y,  vx_,  vy_, "D"));
+				vectors.push(new Vector(p2a.x, p2a.y, -vx_, -vy_, "-D"));
+				vectors.push(new Vector(p3a.x, p3a.y,  vx_,  vy_, "D"));
+				for(let i in vectors) {
+					drawables.push(vectors[i]);
+				}
+
+				drawables.push(polygon1);
+				drawables.push(polygon2);
+				drawables.push(polygon3);
+
+				drawables.push(new Vector(p2a_.x, p2a_.y, p1a_.x - p2a_.x, p1a_.y - p2a_.y));
+				drawables.push(new Vector(0, 0, p3a_.x, p3a_.y));
+
+				break;
+			case 129:
+				for(let i in drawables) {
+					drawables[i].hide();
+					if(drawables[i].hideName != undefined) drawables[i].hideName();
+				}
+				break;
+			case 130:
+				frame = 190;
+				break;
+			case 190:
+				starget.x = 4;
+				starget.y = -4;
+
+				noStroke();
+				fill(230, counter);
+				counter = lerp(counter, 255, 0.1);
+
+				ellipse(0, 100, 7, 7);
+				push();
+					translate(0, 100);
+					scale(1, -1);
+					text("Support", 5, -5);
+				pop();
+				break;
+			case 191:
+				frame = 1100;
+				break;
+			case 1100:
+				starget.x = 2;
+				starget.y = -2;
+
+				polygon1 = new Line(100, 33, -100, 67);
+				polygon1.hidenow();
+
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(new Vector(100, 33, -100, -33, "AO"));
+
+				frame++;
+				break;
+			case 1101:
+				polygon1.show();
+				break;
+			case 1102:
+				polygon1.hideImpossibleRegions();
+				break;
+			case 1103:
+				polygon1.showTest1();
+				break;
+			case 1104:
+				frame = 1113;
+				break;
+			case 1113:
+				var nx = 33;// + sin(frameCount / 60) * 66;
+				var ny = -33;
+
+				polygon1 = new Triangle(nx, ny, 100 - nx, 33 - ny, -nx, 100 - ny);
+				//polygon1.hidenow();
+
+				vectors = [];
+				vectors.push(new Vector(nx, ny, -nx, -ny, "AO"));
+
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(vectors[0]);
+
+				frame++;
+				break;
+			case 1114:
+				polygon1.show();
+				break;
+			case 1115:
+				frame = 1124;
+				break;
+			case 1124:
+				polygon1.hideImpossibleRegions();
+				break;
+			case 1125:
+				polygon1.showTest1();
+				break;
+			case 1126:
+				polygon1.showTest2();
+				break;
+			case 1127:
+				polygon1.y = lerp(polygon1.y, 33, 0.1);
+				polygon1.y1 = 33  - polygon1.y;
+				polygon1.y2 = 100 - polygon1.y;
+
+				vectors[0].y   = polygon1.y;
+				vectors[0].vy = -polygon1.y;
+
+				break;
+			case 1128:
+				polygon1.hide();
+				polygon2 = new Line(polygon1.x, polygon1.y, polygon1.x1, polygon1.y1);
+				
+				polygon2.hideImpossibleRegionsNow();
+				drawables.unshift(polygon2);
+				frame++;				
+				break;
+			case 1129:
+				polygon2.showTest1();
+				//polygon1.showTest3();
+				break;
+			case 1130:
+				polygon1.show();
+				polygon2.hide();
+				break;
+			case 1131:
+				polygon1.x = lerp(polygon1.x, -33, 0.1);
+				polygon1.x1 = 100 - polygon1.x;
+				polygon1.x2 = -polygon1.x;
+
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(new Vector(polygon1.x, polygon1.y, -polygon1.x, -polygon1.y, "AO"));
+				break;
+			case 1132:
+				polygon1.showTest4();
+				break;
+			case 1133:
+				polygon1.hide();
+				polygon2 = new Line(polygon1.x, polygon1.y, polygon1.x1, polygon1.y1);
+				
+				polygon2.hideImpossibleRegionsNow();
+				drawables.unshift(polygon2);
+				frame++;
+			case 1134:
+				polygon2.showTest1();
+				break;
+			case 1135:
+				polygon1.show();
+				polygon2.hide();
+				break;
+			case 1136:
+				polygon1.y = lerp(polygon1.y, -66, 0.1);
+				polygon1.y1 = 33 - polygon1.y;
+				polygon1.y2 = 100 - polygon1.y;
+
+				drawables = [];
+				drawables.push(polygon1);
+				drawables.push(new Vector(polygon1.x, polygon1.y, -polygon1.x, -polygon1.y, "AO"));
+				break;
+			case 1137:
+				drawables = [];
+				mode = WEBGL;
+				windowResized();
+				counter = 128;
+				counter1 = 0;
+				frameCount = 0;
+				frame++;
+				break;
+			case 1139:
+				counter = lerp(counter, 0, 0.1);
+			case 1138:
+				counter1 = lerp(counter1, 255, 0.05);
+
+				fill(230);
+				noStroke();
+
+				let nx_ = (3*polygon1.x + polygon1.x1 + polygon1.x2) / 3;
+				let ny_ = (3*polygon1.y + polygon1.y1 + polygon1.y2) / 3;
+				let nz_ = 100;
+
+				let z_ = -33;
+
+				push();
+					translate(polygon1.x, polygon1.y, z_);
+					sphere(5);
+				pop();
+
+				push();
+					translate(polygon1.x+polygon1.x1, polygon1.y+polygon1.y1, z_);
+					sphere(5);
+				pop();
+
+				push();
+					translate(polygon1.x+polygon1.x2, polygon1.y+polygon1.y2, z_);
+					sphere(5);
+				pop();
+
+				stroke(230, counter1);
+
+				line(polygon1.x,             polygon1.y,             z_, nx_, ny_, nz_);
+				line(polygon1.x+polygon1.x1, polygon1.y+polygon1.y1, z_, nx_, ny_, nz_);
+				line(polygon1.x+polygon1.x2, polygon1.y+polygon1.y2, z_, nx_, ny_, nz_);
+
+				fill(200, 50, 50, counter);
+				stroke(230);
+
+				beginShape();
+					vertex(polygon1.x, polygon1.y, z_);
+					vertex(polygon1.x+polygon1.x1, polygon1.y+polygon1.y1, z_);
+					vertex(polygon1.x+polygon1.x2, polygon1.y+polygon1.y2, z_);
+				endShape(CLOSE);
+
+				fill(200, 200, 50, counter1/2);
+				noStroke();
+
+				beginShape();
+					vertex(polygon1.x+polygon1.x1, polygon1.y+polygon1.y1, z_);
+					vertex(polygon1.x+polygon1.x2, polygon1.y+polygon1.y2, z_);
+					vertex(nx_, ny_, nz_);
+				endShape();
+
+				fill(50, 50, 200, counter1/2);
+
+				beginShape();
+					vertex(polygon1.x, polygon1.y, z_);
+					vertex(polygon1.x+polygon1.x2, polygon1.y+polygon1.y2, z_);
+					vertex(nx_, ny_, nz_);
+				endShape();
+
+				fill(50, 200, 50, counter1/2);
+				
+
+				beginShape();
+					vertex(polygon1.x, polygon1.y, z_);
+					vertex(polygon1.x+polygon1.x1, polygon1.y+polygon1.y1, z_);
+					vertex(nx_, ny_, nz_);
+				endShape();
+
+				fill(230, counter1);
+
+				push();
+					translate(nx_, ny_, nz_);
+					sphere(5);
+				pop();
+
+				break;
+			// default:
+			// 	frame = 138;
+		}
+	}
+
+	function mousePressed() 
+	{
+		frame++;
+
+		if (frame >= 1139)
+			frame = 1139; 
+	}
+</script>
+
+</body>
+</html>

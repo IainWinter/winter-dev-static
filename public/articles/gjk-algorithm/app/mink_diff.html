@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>a</title>
+</head>
+<body style="user-select: none;">	
+	<script src="d3-polygon.min.js"></script>
+	<script src="./polygon.js"></script>
+	<script type="text/javascript" src="p5.min.js"></script>
+<script>
+	function dottedLine(x, y, ex, ey, d = 4) {
+		let distance = sqrt((ex-x)*(ex-x) + (ey-y)*(ey-y)); 
+
+		for (let i = 0.0; i <= distance; i += d) {
+		  let mx = lerp(x, ex, i / distance);
+		  let my = lerp(y, ey, i / distance);
+		  point(mx, my);
+		}
+	}
+
+	function drawTest(x, y, vx, vy, n = "") {
+		let d = sqrt(vx*vx+vy*vy);
+
+		let v = new Vector(x, y, vx/d*100, vy/d*100, n);
+		v.draw();
+
+		strokeWeight(4);
+		stroke(255, 100, 100);
+
+		dottedLine(x, y, -vy*100,  vx*100, 6);
+		dottedLine(x, y,  vy*100, -vx*100, 6);
+	}
+
+	let grid;
+
+	let polygon1;
+	let polygon2;
+	let polygon3;
+	let vectors;
+
+	let counter = 0; let counter1 = 0;
+	
+	let scale_;
+
+	let mode = "2D";
+	let lastMode = mode;
+
+	function setup() {
+		createCanvas(windowWidth, windowHeight, mode);
+		setAttributes('antialias', true);
+
+		grid = new Grid();
+
+		polygon1 = CreateSquare(150, 150, "A");
+		polygon2 = CreateTriangle(350,  50, 100, "B");
+		polygon3 = polygon1.genDifference(polygon2);
+
+		scale_   = createVector(1, -1);
+
+		windowResized();
+	}
+
+	function windowResized() {
+	  	resizeCanvas(windowWidth, windowHeight);
+		scale_.x = windowWidth / 1280*1.5;
+		scale_.y = -windowHeight / 720*1.5;
+	}
+
+	function draw() 
+	{
+		polygon2 = CreateTriangle(240, 110, counter / 360 * PI, "B");
+		polygon3.p = polygon1.genDifference(polygon2).p;
+		vectors = polygon1.genVectorList(polygon2);
+
+		counter += 1;
+
+		background(48, 255);
+		translate(width / 2, height / 2);
+		scale(scale_.x, scale_.y);
+
+		grid.draw();
+		polygon1.draw();
+		polygon2.draw();
+		for(let i in vectors) {
+			vectors[i].x = vectors[i].y = 0; // This is what puts the vectors at the origin
+			vectors[i].draw();
+		}
+		polygon3.draw();
+	}
+</script>
+
+</body>
+</html>
