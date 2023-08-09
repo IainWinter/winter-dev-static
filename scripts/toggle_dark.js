@@ -1,5 +1,5 @@
-const g_lightOnIcon = ref("light_on.svg");
-const g_lightOffIcon = ref("light_off.svg");
+const g_lightOnIcon = ref("icons/light_on.svg");
+const g_lightOffIcon = ref("icons/light_off.svg");
 
 function toggleDark() {
 	let theme = localStorage.getItem("theme");

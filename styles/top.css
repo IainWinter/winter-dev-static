@@ -2,6 +2,7 @@
 	height: 100vh;
 	width: fit-content;
 	max-width: 360px;
+	width: 215px;
 	flex-direction: column;
 	display: flex;
 	user-select: none;
