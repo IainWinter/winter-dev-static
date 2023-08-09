@@ -1,5 +1,6 @@
 ---
 title: EPA: Collision response algorithm for 2D/3D
+slug: epa-algorithm
 date: November 17, 2020
 thumbnail: 0XQ2FSz3EK8.jpg
 published: true
@@ -58,7 +59,7 @@ function `f`EPA(`a`polytope, `a`shapeA, `a`shapeB) {
 
 Finding the normal of a vector in 2D is done by swapping the X and Y components and flipping one of their signs. The handedness, either right or left, depends on which component gets flipped. Depending on the winding order, the handedness that results in an outward facing normal changes, so it's common to add a check to flip it if it's wrong.
 
-[svg](../content/embed/epa-normal.svg)
+[svg](./content/embed/epa-normal.svg)
 
 Once we have this normal, we can use the Support function to test for a point further out in its direction. If there is one, we'll insert the support point between the vertices in the polytope and repeat. If there isn't one, we know we have found the actual closest normal and can return it. Adding a small amount to the distance is useful to stop repeat collisions that would have moved the shapes an even smaller distance.
 

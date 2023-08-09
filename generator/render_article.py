@@ -28,7 +28,7 @@ STATE_START = 0
 STATE_META = 1
 STATE_TEXT = 2
 
-def render_article(text, functions):
+def render_article(text, functions, exit_on_meta = False):
     # the renderer output is a list of strings and the metadata
 	strings = []
 	meta = {}
@@ -37,12 +37,18 @@ def render_article(text, functions):
 	c = '\0'
 	current_block = io.StringIO()
 	current_block_is_paragraph = False
+	line_count = 0
 
 	def nextChar():
 		nonlocal i
 		nonlocal c
+		nonlocal line_count
+
 		i += 1
 		c = text[i]
+
+		if c == '\n':
+			line_count += 1
 
 	def advance(count):
 		nonlocal i
@@ -127,6 +133,11 @@ def render_article(text, functions):
 				c2 = text[i + 2]
 
 				if c1 == '-' and c2 == '-':
+					# This should be in its own functions
+					# but this works for now
+					if exit_on_meta:
+						return meta
+
 					state = STATE_TEXT
 					advance(2)
 					continue
@@ -145,7 +156,10 @@ def render_article(text, functions):
 			if c == '\n' and (c1 == '\n' or was_just_object):
 				was_just_object = False
 				writeBlock()
-				advance(1)
+
+				if c1 == '\n':
+					advance(1)
+
 				continue
 
 			# At the beginning of an object, may be inside of a paragraph or may be free
@@ -164,11 +178,13 @@ def render_article(text, functions):
 				
 				nextChar()
 
+				# print(f"Found object {type.getvalue()} at line {line_count}")
+
 				# Let the user parse the arguments themselves
 				# alls we need to parse out now is everything between two paranthesis, but the content can contain paranthesis
 				# apply the constraint that there needs to be an even number of paranthesis in the arguments, this should be fine for everything I can think of
 
-				argument_string = io.StringIO()
+				arguments = io.StringIO()
 
 				paren_count = 1
 				while True:
@@ -180,10 +196,18 @@ def render_article(text, functions):
 					if paren_count == 0:	
 						break
 
-					argument_string.write(c)
+					arguments.write(c)
 					nextChar()
 
-				functions[type.getvalue()](current_block, argument_string.getvalue())
+				argument_string = arguments.getvalue()
+				has_arguments = len(argument_string) > 0
+				func = functions[type.getvalue()]
+
+				if has_arguments:
+					func(current_block, argument_string)
+				else:
+					func(current_block)
+
 				was_just_object = True
 
 			else:

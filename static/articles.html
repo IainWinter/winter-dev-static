@@ -6,6 +6,7 @@
 	<link rel="icon" type="image/x-icon" href="/favicon.ico">
 	<link rel="stylesheet" href="/styles/global.css" />
 	<link rel="stylesheet" href="/styles/top.css" />
+	<link rel="stylesheet" href="/styles/card.css" />
 </head>
 
 <script src="/scripts/no_flashbang.js"></script>
@@ -17,37 +18,73 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="/articles">Articles</a>
-					<a class="nav-link" href="/projects">Projects</a>
-					<a class="nav-link" href="/support">Support</a>
+					<a class="nav-link" href="/articles.html">Articles</a>
+					<a class="nav-link" href="/projects.html">Projects</a>
+					<a class="nav-link" href="/support.html">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<p class="fake-href" onclick="toggleDark();">0</p>
+					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
+		<script src="/scripts/toggle_dark.js"></script>
 	
 		<div class="page">
+			<h1 class="page-title">Articles</h1>
+			<div>
+		<div class="article-card">
+			<a href=/articles/epa-algorithm.html><img class="article-card-thumb" src=/thumbnails/0XQ2FSz3EK8.jpg /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=/articles/epa-algorithm.html>EPA: Collision response algorithm for 2D/3D</a>
+				<p class="article-card-text-date">November 17, 2020</p>
+			</div>
+		</div>
+	
+		<div class="article-card">
+			<a href=/articles/falling-sand.html><img class="article-card-thumb" src=/thumbnails/wZJCQQPaGZI.jpg /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=/articles/falling-sand.html>Making games with Falling Sand part 1</a>
+				<p class="article-card-text-date">December 30, 2020</p>
+			</div>
+		</div>
+	
+		<div class="article-card">
+			<a href=/articles/falling-sand-worlds.html><img class="article-card-thumb" src=/thumbnails/vNcsPE_YdmA.jpg /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=/articles/falling-sand-worlds.html>Making an infinite world with Falling Sand part 2</a>
+				<p class="article-card-text-date">March 27, 2021</p>
+			</div>
+		</div>
+	
+		<div class="article-card">
+			<a href=/articles/gjk-algorithm.html><img class="article-card-thumb" src=/thumbnails/MDusDn8oTSE.jpg /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=/articles/gjk-algorithm.html>GJK: Collision detection algorithm in 2D/3D</a>
+				<p class="article-card-text-date">August 29, 2020</p>
+			</div>
+		</div>
+	
+		<div class="article-card">
+			<a href=/articles/physics-engine.html><img class="article-card-thumb" src=/thumbnails/-_IspRG548E.jpg /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=/articles/physics-engine.html>Designing a physics engine</a>
+				<p class="article-card-text-date">July 31, 2020</p>
+			</div>
+		</div>
+	<hr class="article-cards-separator" />
+		<div class="article-card">
+			
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=/articles/another-way.html>Another way of programming, taking it slow</a>
+				<p class="article-card-text-date">July 6, 2020</p>
+			</div>
 		</div>
 	</div>
-
-	<script>
-		function swapIframe(img, iframeSrc) {
-			// swap img for an iframe with its source set to iframeSrc
-			// this is used to swap the thumbnail for a youtube embed
-
-			var iframe = document.createElement("iframe");
-			iframe.classList = "article-embed";
-			iframe.src = iframeSrc;
-
-			img.parentNode.appendChild(iframe);
-			iframe.after(img);
-			img.remove();
-		}
-	</script>
+		</div>
+	</div>
 </body>
 
 </html>

@@ -40,6 +40,8 @@
 
 .nav-buttons>* {
 	cursor: pointer;
+	width: 36px;
+	height: 36px;
 }
 
 .nav-links:hover>* {
@@ -117,7 +119,8 @@
 	.nav-buttons>* {
 		margin: auto 0;
 		display: block;
-		font-size: 28px;
+		width: 28px;
+		height: 28px;
 	}
 
 	.nav-separator {

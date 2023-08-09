@@ -1,0 +1,821 @@
+<html lang="en">
+
+<head>
+	<title>Making an infinite world with Falling Sand part 2</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" type="image/x-icon" href="/favicon.ico">
+	<link rel="stylesheet" href="/styles/global.css" />
+	<link rel="stylesheet" href="/styles/top.css" />
+	<link rel="stylesheet" href="/styles/article.css" />
+	<link rel="stylesheet" href="/styles/code.css" />
+</head>
+
+<script src="/scripts/no_flashbang.js"></script>
+
+<body color-theme="dark">
+	<div class="main">
+		
+		<div class="top">
+			<h1 class="title">Winter</h1>
+			<div class="nav-section">
+				<div class="nav-links">
+					<a class="nav-link" href="/articles.html">Articles</a>
+					<a class="nav-link" href="/projects.html">Projects</a>
+					<a class="nav-link" href="/support.html">Support</a>
+				</div>
+
+				<hr class="nav-separator" />
+
+				<div class="nav-buttons">
+					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
+				</div>
+			</div>
+		</div>
+		<script src="/scripts/toggle_dark.js"></script>
+	
+		<div class="page">
+			<h1 class="page-title">Making an infinite world with Falling Sand part 2</h1>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/vNcsPE_YdmA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/vNcsPE_YdmA?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>Welcome back to the sand series, this post directly follows from what we did last time, so if you missed that, here's the <a class="underline" target="_blank" href="/articles/falling-sand-simulations">link</a>. In this post we'll first split the world into chunks, then look at some ways to speed it up.</p>
+			<h2 class="article-subtitle mark-section" id=Splitting>
+				Splitting the world into chunks
+				<a class="article-subtitle-id-link" href="#Splitting">#</a>
+			</h2>
+		<p>The main feature that chunks allow for is expanding the world quickly. Let's look at the two extreme solutions, and then why chunks are the obvious way to go.</p><p>If we store the world in a single list, whenever the player reaches the edge, the whole list needs to be reallocated. This would be fine for smaller worlds, but with bigger worlds becomes impractical. Another approach would be to store each cell in a map. This would allow for an expanding world but is crippled by very slow iteration caused by the memory being scattered all over the place.</p><p>The solution comes from mixing the two together. If we store small lists in a map, we can have fast iteration, while also being able to expand the world without copying anything. These lists will act as our chunks, and if each one is a fixed size, some simple math can find the corresponding one from a world coordinate. Whenever the player wants to expand the world, we just add more chunks into the map. This only takes minimal work to implement. Each chunk is just like a small world, all we need to account for is that a particle could move from one chunk to another.</p><p>We ended last time with a SandWorld class that contained some simple functions for getting, setting, and moving cells. Let's copy those, along with the member variables to a new class called SandChunk.</p><p>There are only few changes we need to make. First, we'll add member variables for the chunk's world position, and edit GetIndex and InBounds to account for these. We'll also need to change all the functions that take x and y from unsigned to signed ints, as world coordinates contain negative numbers. Originally, I had tried to convert from world coordinates to chunk coordinates in the world, but that was a headache, this way there is only one coordinate system all the way down.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">class </span><span class="code-t">SandChunk </span><span class="code-s">{
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-w">m_width</span><span class="code-s">, </span><span class="code-w">m_height;
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-w">m_x</span><span class="code-s">, </span><span class="code-w">m_y;
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-t">Cell</span><span class="code-s">* </span><span class="code-w">m_cells;
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">&gt </span><span class="code-w">m_changes; </span><span class="code-c">// destination, source
+ 
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-f">SandChunk</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">width</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">height</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">)
+		</span><span class="code-s">: </span><span class="code-w">m_width  </span><span class="code-s">(</span><span class="code-a">width</span><span class="code-s">)
+		</span><span class="code-s">, </span><span class="code-w">m_height </span><span class="code-s">(</span><span class="code-a">height</span><span class="code-s">)
+		</span><span class="code-s">, </span><span class="code-w">m_x      </span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">)
+		</span><span class="code-s">, </span><span class="code-w">m_y      </span><span class="code-s">(</span><span class="code-a">y</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-w">m_cells </span><span class="code-s">= </span><span class="code-r">new </span><span class="code-t">Cell</span><span class="code-s">[</span><span class="code-a">width </span><span class="code-s">* </span><span class="code-a">height</span><span class="code-s">];
+	</span><span class="code-s">}
+ 
+	</span><span class="code-f">~SandChunk</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">delete</span><span class="code-s">[</span><span class="code-s">] </span><span class="code-w">m_cells;
+	</span><span class="code-s">}
+ 
+	</span><span class="code-t">size_t </span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">- </span><span class="code-w">m_x</span><span class="code-s">)
+		     </span><span class="code-s">+ </span><span class="code-s">(</span><span class="code-a">y </span><span class="code-s">- </span><span class="code-w">m_y</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-w">m_width;
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">bool </span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-a">x </span><span class="code-s">&gt</span><span class="code-s">= </span><span class="code-w">m_x </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">x </span><span class="code-s">&lt </span><span class="code-w">m_x </span><span class="code-s">+ </span><span class="code-w">m_width
+		    </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">y </span><span class="code-s">&gt</span><span class="code-s">= </span><span class="code-w">m_y </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">y </span><span class="code-s">&lt </span><span class="code-w">m_y </span><span class="code-s">+ </span><span class="code-w">m_height;
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">bool </span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">); </span><span class="code-s">}
+	</span><span class="code-r">bool </span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">index</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-v">index</span><span class="code-s">)</span><span class="code-s">.Type </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY; </span><span class="code-s">}
+ 
+ 
+	</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">); </span><span class="code-s">}
+	</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-t">size_t index</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_cells</span><span class="code-s">[index</span><span class="code-s">]; </span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">); </span><span class="code-s">}
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">index</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-v">index</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-a">cell; </span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>The second edit we'll make allows for particles to move from one chunk to another. Let's edit the m_changes list to store tuples and add a SandChunk* along with the indices from before.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">tuple</span><span class="code-s">&lt</span><span class="code-t">SandChunk</span><span class="code-s">*</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">&gt </span><span class="code-w">m_changes; </span><span class="code-c">// source chunk, source, destination
+	
+	</span><span class="code-r">void </span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">source</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yto</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(
+			</span><span class="code-a">source</span><span class="code-s">,
+			</span><span class="code-a">source</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">,
+			</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">)
+		</span><span class="code-s">);
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>In CommitCells, any .first or .second needs to be changed to std::get<>. Where we set the cell's data, instead of writing directly to m_cells, we'll use GetCell and SetCell with the source chunk.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-a">#define </span><span class="code-p">_DEST</span><span class="code-s">(x</span><span class="code-s">) </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">get</span><span class="code-s">&lt</span><span class="code-d">2</span><span class="code-s">&gt</span><span class="code-s">(x</span><span class="code-s">)
+ 
+	</span><span class="code-r">void </span><span class="code-f">CommitCells</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{ 
+		</span><span class="code-c">// remove moves that have their destinations filled
+ 
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; i </span><span class="code-s">&lt </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">!</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-p">_DEST</span><span class="code-s">(</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">)</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
+				</span><span class="code-v">i</span><span class="code-s">-</span><span class="code-s">-;
+			</span><span class="code-s">}
+		</span><span class="code-s">}
+ 
+		</span><span class="code-c">// sort by destination
+ 
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">sort</span><span class="code-s">(</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">,
+			</span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">auto</span><span class="code-s">& </span><span class="code-a">a</span><span class="code-s">, </span><span class="code-r">auto</span><span class="code-s">& </span><span class="code-a">b</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-p">_DEST</span><span class="code-s">(</span><span class="code-a">a</span><span class="code-s">) </span><span class="code-s">&lt </span><span class="code-p">_DEST</span><span class="code-s">(</span><span class="code-a">b</span><span class="code-s">); </span><span class="code-s">}
+		</span><span class="code-s">);
+ 
+		</span><span class="code-c">// pick random source for each destination
+ 
+		</span><span class="code-t">size_t </span><span class="code-v">iprev </span><span class="code-s">= </span><span class="code-d">0;
+ 
+		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-r">nullptr</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">); </span><span class="code-c">// to catch final move
+ 
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">- </span><span class="code-d">1; </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-p">_DEST</span><span class="code-s">(</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">) </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-p">_DEST</span><span class="code-s">(</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-t">size_t </span><span class="code-v">rand </span><span class="code-s">= </span><span class="code-v">iprev </span><span class="code-s">+ </span><span class="code-f">rand_int</span><span class="code-s">(</span><span class="code-v">i </span><span class="code-s">- </span><span class="code-v">iprev</span><span class="code-s">);
+ 
+				</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">chunk</span><span class="code-s">, </span><span class="code-v">src</span><span class="code-s">, </span><span class="code-v">dst</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">rand</span><span class="code-s">];
+ 
+				       </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-v">dst</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-v">src</span><span class="code-s">)</span><span class="code-s">);
+				</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-v">src</span><span class="code-s">, </span><span class="code-t">Cell</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">);
+ 
+				</span><span class="code-v">iprev </span><span class="code-s">= </span><span class="code-f">i </span><span class="code-s">+ </span><span class="code-d">1;
+			</span><span class="code-s">}
+		</span><span class="code-s">}
+ 
+		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">clear</span><span class="code-s">(</span><span class="code-s">);
+	</span><span class="code-s">}
+</span><span class="code-s">};
+</span></pre>
+			</div>
+		<p>Now that we have chunks that can work together, we need to coordinate them in the SandWorld. Let's replace every function from before with one that gets a chunk, then calls its respected function.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorld.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">class </span><span class="code-t">SandWorld </span><span class="code-s">{
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-r">const </span><span class="code-t">size_t </span><span class="code-w">m_chunkWidth;
+	</span><span class="code-r">const </span><span class="code-t">size_t </span><span class="code-w">m_chunkHeight;
+	</span><span class="code-r">const </span><span class="code-r">double </span><span class="code-w">m_scale;
+	
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-f">SandWorld</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">chunkWidth</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">chunkHeight</span><span class="code-s">, </span><span class="code-r">double </span><span class="code-a">scale</span><span class="code-s">)
+		</span><span class="code-s">: </span><span class="code-w">m_chunkWidth  </span><span class="code-s">(</span><span class="code-a">chunkWidth  </span><span class="code-s">/ </span><span class="code-a">scale</span><span class="code-s">)
+		</span><span class="code-s">, </span><span class="code-w">m_chunkHeight </span><span class="code-s">(</span><span class="code-a">chunkHeight </span><span class="code-s">/ </span><span class="code-a">scale</span><span class="code-s">)
+		</span><span class="code-s">, </span><span class="code-w">m_scale       </span><span class="code-s">(</span><span class="code-a">scale</span><span class="code-s">)
+	</span><span class="code-s">{</span><span class="code-s">}
+ 
+	</span><span class="code-r">bool </span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-r">false;
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">bool </span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)
+		    </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yto</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">src </span><span class="code-s">= </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">)
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">dst </span><span class="code-s">= </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-a">dst</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-a">src</span><span class="code-s">, </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>The final piece we need to add is storage for the chunks. I opted for a vector of SandChunk* for iteration, and a map to look them up by coordinate.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorld.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">SandChunk</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_chunks;
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unordered_map</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt</span><span class="code-s">, </span><span class="code-t">SandChunk</span><span class="code-s">*</span><span class="code-s">, </span><span class="code-t">pair_hash</span><span class="code-s">&gt </span><span class="code-w">m_chunkLookup;
+</span></pre>
+			</div>
+		<p>Pair hash is defined as the (first hash * #) ^ second hash</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">pair_hash.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">struct </span><span class="code-t">pair_hash </span><span class="code-s">{
+	</span><span class="code-r">template</span><span class="code-s">&lt</span><span class="code-r">typename </span><span class="code-t">T1</span><span class="code-s">, </span><span class="code-r">typename </span><span class="code-t">T2</span><span class="code-s">&gt
+	</span><span class="code-t">size_t </span><span class="code-r">operator</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">(</span><span class="code-r">const </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-t">T1</span><span class="code-s">, </span><span class="code-t">T2</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">pair</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-s">( </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">hash</span><span class="code-s">&lt</span><span class="code-t">T1</span><span class="code-s">&gt</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">(</span><span class="code-a">pair</span><span class="code-s">.</span><span class="code-w">first</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-d">0x1f1f1f1f</span><span class="code-s">)
+			   </span><span class="code-s">^ </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">hash</span><span class="code-s">&lt</span><span class="code-t">T2</span><span class="code-s">&gt</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">(</span><span class="code-a">pair</span><span class="code-s">.</span><span class="code-w">second</span><span class="code-s">);
+	</span><span class="code-s">}
+</span><span class="code-s">};
+</span></pre>
+			</div>
+		<p>Now that we have our containers, we can make GetChunk. First, we'll convert the world coordinates into a chunk location, then we'll get the chunk or create a new one. To create a new chunk, let's make a function called CreateChunk and pass it the location. Here, we can define the world boundaries; if the location is inside, we'll make a new chunk, add it to the containers and return.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorld.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">auto </span><span class="code-v">location </span><span class="code-s">= </span><span class="code-f">GetChunkLocation</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+		</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-f">GetChunkDirect</span><span class="code-s">(</span><span class="code-v">location</span><span class="code-s">);
+ 
+		</span><span class="code-j">return </span><span class="code-v">chunk </span><span class="code-s">? </span><span class="code-v">chunk </span><span class="code-s">: CreateChunk</span><span class="code-s">(</span><span class="code-v">location</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-f">GetChunkDirect</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-a">location</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">auto </span><span class="code-v">itr </span><span class="code-s">= </span><span class="code-w">m_chunkLookup</span><span class="code-s">.</span><span class="code-f">find</span><span class="code-s">(</span><span class="code-a">location</span><span class="code-s">);
+		</span><span class="code-r">auto </span><span class="code-v">end </span><span class="code-s">= </span><span class="code-w">m_chunkLookup</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">);
+ 
+		</span><span class="code-j">return </span><span class="code-v">itr </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-v">end </span><span class="code-s">? </span><span class="code-v">itr</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">second </span><span class="code-s">: </span><span class="code-r">nullptr;
+	</span><span class="code-s">}
+ 
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-f">GetChunkLocation</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-s">{ </span><span class="code-f">floor</span><span class="code-s">(</span><span class="code-r">float</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-w">m_chunkWidth</span><span class="code-s">)</span><span class="code-s">,
+		         </span><span class="code-f">floor</span><span class="code-s">(</span><span class="code-r">float</span><span class="code-s">(</span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-w">m_chunkHeight</span><span class="code-s">)</span><span class="code-s">};
+	</span><span class="code-s">}
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-f">CreateChunk</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-a">location</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">lx</span><span class="code-s">, </span><span class="code-v">ly</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-a">location;
+ 
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-v">lx </span><span class="code-s">&lt </span><span class="code-s">-</span><span class="code-d">10 </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">ly </span><span class="code-s">&lt </span><span class="code-s">-</span><span class="code-d">10 
+		    </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">lx </span><span class="code-s">&gt  </span><span class="code-d">10 </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">ly </span><span class="code-s">&gt  </span><span class="code-d">10</span><span class="code-s">) </span><span class="code-c">// could pass in a world limit to constructor
+		</span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">nullptr;
+		</span><span class="code-s">}
+ 
+		</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-r">new </span><span class="code-t">SandChunk</span><span class="code-s">(</span><span class="code-w">m_chunkWidth</span><span class="code-s">, </span><span class="code-w">m_chunkHeight</span><span class="code-s">, </span><span class="code-v">lx</span><span class="code-s">, </span><span class="code-v">ly</span><span class="code-s">);
+ 
+		</span><span class="code-w">m_chunkLookup</span><span class="code-s">.</span><span class="code-f">insert</span><span class="code-s">(</span><span class="code-s">{ </span><span class="code-a">location</span><span class="code-s">, </span><span class="code-v">chunk </span><span class="code-s">}</span><span class="code-s">);
+		</span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">chunk</span><span class="code-s">);
+ 
+		</span><span class="code-j">return </span><span class="code-v">chunk;
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Finally, the Update function needs to be edited to iterate over the chunks.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SomeClass.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-t">SandWorld </span><span class="code-w">m_world </span><span class="code-s">= </span><span class="code-t">SandWorld</span><span class="code-s">(</span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">); </span><span class="code-c">// in a class somewhere
+
+</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-c">// Draw cells with mouse
+	</span><span class="code-c">// Paste tiles
+
+	</span><span class="code-c">// Update cells
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">x </span><span class="code-s">&lt </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_width;  </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">y </span><span class="code-s">&lt </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_height; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-v">cell </span><span class="code-s">= </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-v">y </span><span class="code-s">* </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_width</span><span class="code-s">);
+
+			</span><span class="code-r">int </span><span class="code-v">px </span><span class="code-s">= </span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_x;
+			</span><span class="code-r">int </span><span class="code-v">py </span><span class="code-s">= </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_y;
+
+			     </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveDown    </span><span class="code-s">(</span><span class="code-v">px</span><span class="code-s">, </span><span class="code-v">py</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
+			</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN_SIDE </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveDownSide</span><span class="code-s">(</span><span class="code-v">px</span><span class="code-s">, </span><span class="code-v">py</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
+			</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_SIDE      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveSide    </span><span class="code-s">(</span><span class="code-v">px</span><span class="code-s">, </span><span class="code-v">py</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">CommitCells</span><span class="code-s">(</span><span class="code-s">);
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Copy sand colors to a texture
+	</span><span class="code-c">// Draw the texture on the screen
+	</span><span class="code-c">// Remove tiles
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>And with that, we have chunked the world. I've made the texture draw a red pixel on the boundary of each chunk so we can see them. While I'm at it, I've made the camera center around the player so now we can fly around and see chunks all around us.</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/29iiIUi9_kE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/29iiIUi9_kE?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		
+			<h2 class="article-subtitle mark-section" id=Performance>
+				Performance
+				<a class="article-subtitle-id-link" href="#Performance">#</a>
+			</h2>
+		<p>Optimization is something that never ends, so I am going to only look at a few of the most bang for buck areas we can smooth out.</p><p>Let's start with something small. Currently, every time a world function gets called, it needs to find a chunk from the map. These can't be expected to be in the cache, so hitting this map for every cell will add up to a considerable loss of time. To get around this, let's make a SandWorker class that stores a chunk from the map, then only calls back to the world if necessary. This also gives us a nice way to hook into the engine with other custom behaviors.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorker.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">class </span><span class="code-t">SandWorker </span><span class="code-s">{
+</span><span class="code-r">protected</span><span class="code-s">:
+	</span><span class="code-t">SandWorld</span><span class="code-s">& </span><span class="code-w">m_world;
+	</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-w">m_chunk;
+ 
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-f">SandWorker</span><span class="code-s">(</span><span class="code-t">SandWorld</span><span class="code-s">& world</span><span class="code-s">, </span><span class="code-t">SandChunk</span><span class="code-s">* chunk</span><span class="code-s">)
+		</span><span class="code-s">: </span><span class="code-w">m_world </span><span class="code-s">(world</span><span class="code-s">)
+		</span><span class="code-s">, </span><span class="code-w">m_chunk </span><span class="code-s">(chunk</span><span class="code-s">)
+	</span><span class="code-s">{</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">UpdateChunk</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">x </span><span class="code-s">&lt </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_width;  </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">y </span><span class="code-s">&lt </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_height; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-v">cell </span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-v">y </span><span class="code-s">* </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_width</span><span class="code-s">);
+ 
+			</span><span class="code-r">int px </span><span class="code-s">= </span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_x;
+			</span><span class="code-r">int py </span><span class="code-s">= </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_y;
+ 
+			</span><span class="code-f">UpdateCell</span><span class="code-s">(</span><span class="code-v">px</span><span class="code-s">, </span><span class="code-v">py</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">virtual </span><span class="code-r">void </span><span class="code-f">UpdateCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">= </span><span class="code-d">0;
+ 
+	</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-r">int x</span><span class="code-s">, </span><span class="code-r">int y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(x</span><span class="code-s">, y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetCell</span><span class="code-s">(x</span><span class="code-s">, y</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">GetCell</span><span class="code-s">(x</span><span class="code-s">, y</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yto</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)
+		    </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">)</span><span class="code-s">)
+		</span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-w">m_chunk</span><span class="code-s">, </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">bool </span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)
+		    </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-w">m_world </span><span class="code-s">.</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">bool </span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+	</span><span class="code-s">}
+</span><span class="code-s">};
+</span></pre>
+			</div>
+		<p>Now we can override this class and put our custom cell behaviors in it.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SimpleSandWorker.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">class </span><span class="code-t">SimpleSandWorker </span><span class="code-s">: </span><span class="code-r">public </span><span class="code-t">SandWorker </span><span class="code-s">{
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-f">SimpleSandWorker</span><span class="code-s">(</span><span class="code-t">SandWorld</span><span class="code-s">& </span><span class="code-a">world</span><span class="code-s">, </span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">chunk</span><span class="code-s">) 
+		</span><span class="code-s">: </span><span class="code-t">SandWorker </span><span class="code-s">(</span><span class="code-a">world</span><span class="code-s">, </span><span class="code-a">chunk</span><span class="code-s">) 
+	</span><span class="code-s">{</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">UpdateCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-r">override </span><span class="code-s">{
+		     </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveDown    </span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
+		</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN_SIDE </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveDownSide</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
+		</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_SIDE      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveSide    </span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
+	</span><span class="code-s">}
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-r">bool </span><span class="code-f">MoveDown    </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
+	</span><span class="code-r">bool </span><span class="code-f">MoveDownSide</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
+	</span><span class="code-r">bool </span><span class="code-f">MoveSide    </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
+</span><span class="code-s">};
+</span></pre>
+			</div>
+		<p>To make use of this, let's edit the Update function. You could add a list of these in the world, but for now I'll just hard code this one.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SomeClass.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-c">// Draw cells with mouse
+	</span><span class="code-c">// Paste tiles
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-t">SimpleSandWorker</span><span class="code-s">(</span><span class="code-w">m_world</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">)</span><span class="code-s">.</span><span class="code-f">UpdateChunk</span><span class="code-s">(</span><span class="code-s">);
+	</span><span class="code-s">}
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">CommitCells</span><span class="code-s">(</span><span class="code-s">);
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Copy sand colors to a texture
+	</span><span class="code-c">// Draw the texture on the screen
+	</span><span class="code-c">// Remove tiles
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>The biggest time sink is iterating over the cells, so anything we can do to cutdown on the number we need to check will improve the frame rate dramatically. The most obvious is that most chunks are completely empty, so we could delete those and remove them from iteration entirely.</p><p>To do this, let's add a count of filled cells in the SandChunk. When setting a cell, if the source is filled but the destination isn't, we'll increment by one. Inversely, if the destination is filled and we are setting it to empty, we'll decrement.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-t">size_t </span><span class="code-w">m_filledCellCount;
+ 
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">index</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-v">dest </span><span class="code-s">= </span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-a">index</span><span class="code-s">];
+ 
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-v">dest</span><span class="code-s">.Type </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY
+		    </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">.Type </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY</span><span class="code-s">) </span><span class="code-c">// Filling a cell
+		</span><span class="code-s">{
+			</span><span class="code-w">m_filledCellCount</span><span class="code-s">+</span><span class="code-s">+;
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">else
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-v">dest</span><span class="code-s">.Type </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY
+			</span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">.Type </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY</span><span class="code-s">) </span><span class="code-c">// Removing a filled cell
+		</span><span class="code-s">{
+			</span><span class="code-w">m_filledCellCount</span><span class="code-s">-</span><span class="code-s">-;
+		</span><span class="code-s">}
+ 
+		</span><span class="code-v">dest </span><span class="code-s">= </span><span class="code-a">cell;
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>In the SandWorld, let's add a new function called RemoveEmptyChunks.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorld.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">void </span><span class="code-f">RemoveEmptyChunks</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">at</span><span class="code-s">(</span><span class="code-v">i</span><span class="code-s">);
+ 
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_filledCellCount </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-w">m_chunkLookup</span><span class="code-s">.</span><span class="code-f">erase</span><span class="code-s">(</span><span class="code-f">GetChunkLocation</span><span class="code-s">(</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_x</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_y</span><span class="code-s">)</span><span class="code-s">);
+			</span><span class="code-w">m_chunks</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
+			</span><span class="code-v">i</span><span class="code-s">-</span><span class="code-s">-;
+ 
+			</span><span class="code-r">delete </span><span class="code-v">chunk;
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Then call it before the world update.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SomeClass.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-c">// Draw cells with mouse
+	</span><span class="code-c">// Paste tiles
+
+	</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">RemoveEmptyChunks</span><span class="code-s">(</span><span class="code-s">);
+
+	</span><span class="code-c">// Update cells
+
+	</span><span class="code-c">// Copy sand colors to a texture
+	</span><span class="code-c">// Draw the texture on the screen
+	</span><span class="code-c">// Remove tiles
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>If we look back at the chunk visualization, there are now only chunks where there are filled cells.</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/X5Uwk63wLP4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/X5Uwk63wLP4?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>However, we still iterate over the static cells like rocks. This brings us to the second optimization. If a chunk only has a single filled cell, every cell is still iterated. We could though, select only a subsection to iterate. This technique is commonly referred to as a dirty rectangle and used in UI painting to save time by not redrawing static elements.</p><p>Whenever a cell gets set or moved, this rectangle needs to expand to contain it for the next update. We can't expand this rectangle during an update, so we need to double buffer it like we did for the initial <a class="underline" target="_blank" href="/articles/falling-sand-simulations#java-version">Processing version</a> of the cells array. To implement this, let's add a min/max x and y to the SandChunk along with two functions named UpdateRect and KeepAlive.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-r">int </span><span class="code-w">m_minX</span><span class="code-s">, </span><span class="code-w">m_minY</span><span class="code-s">,
+	    </span><span class="code-w">m_maxX</span><span class="code-s">, </span><span class="code-w">m_maxY;   </span><span class="code-c">// Dirty rect
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-r">int </span><span class="code-w">m_minXw</span><span class="code-s">, </span><span class="code-w">m_minYw</span><span class="code-s">,
+	    </span><span class="code-w">m_maxXw</span><span class="code-s">, </span><span class="code-w">m_maxYw; </span><span class="code-c">// Working dirty rect
+ 
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-r">void </span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">index</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">int </span><span class="code-a">x </span><span class="code-s">= </span><span class="code-a">index % </span><span class="code-w">m_width;
+		</span><span class="code-r">int </span><span class="code-a">y </span><span class="code-s">= </span><span class="code-a">index </span><span class="code-s">/ </span><span class="code-w">m_width;
+ 
+		</span><span class="code-w">m_minXw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">- </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_minXw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_width</span><span class="code-s">);
+		</span><span class="code-w">m_minYw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-v">y </span><span class="code-s">- </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_minYw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_height</span><span class="code-s">);
+		</span><span class="code-w">m_maxXw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">max</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_maxXw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_width</span><span class="code-s">);
+		</span><span class="code-w">m_maxYw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">max</span><span class="code-s">(</span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_maxYw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_height</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">void </span><span class="code-f">UpdateRect</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-c">// Update current; reset working
+		</span><span class="code-w">m_minX </span><span class="code-s">= </span><span class="code-w">m_minXw;  </span><span class="code-w">m_minXw </span><span class="code-s">= </span><span class="code-w">m_width;
+		</span><span class="code-w">m_minY </span><span class="code-s">= </span><span class="code-w">m_minYw;  </span><span class="code-w">m_minYw </span><span class="code-s">= </span><span class="code-w">m_height;
+		</span><span class="code-w">m_maxX </span><span class="code-s">= </span><span class="code-w">m_maxXw;  </span><span class="code-w">m_maxXw </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;
+		</span><span class="code-w">m_maxY </span><span class="code-s">= </span><span class="code-w">m_maxYw;  </span><span class="code-w">m_maxYw </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;	
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Then in SetCell, we'll pass the index to KeepAlive.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">index</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-c">// Set cell & update count
+
+		</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-a">index</span><span class="code-s">);
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Because the chunks can update each other's rectangles, we need to wait for all the chunks to be committed before calling UpdateRect. To do this, let's add another loop after committing the cells in the main update.</p><p>Now, in the SandWorker's Update function, instead of iterating from 0 to the boundary, we can iterate from the min to the max of the rectangle.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">UpdateChunk</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_minX; </span><span class="code-v">x </span><span class="code-s">&lt </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_maxX; </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_minY; </span><span class="code-v">y </span><span class="code-s">&lt </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_maxY; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-v">cell </span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-v">y </span><span class="code-s">* </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_width</span><span class="code-s">);
+ 
+			</span><span class="code-r">int px </span><span class="code-s">= </span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_x;
+			</span><span class="code-r">int py </span><span class="code-s">= </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_y;
+ 
+			</span><span class="code-f">UpdateCell</span><span class="code-s">(</span><span class="code-v">px</span><span class="code-s">, </span><span class="code-v">py</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>I was under the impression that this was all that was required, but if we look at the boundary of a sleeping chunk, the cells don't wake up correctly. This happens because the rectangles are bounded by the chunks and they can't talk to their neighbors.</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/8K1UN0H5X0w.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/8K1UN0H5X0w?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>We need a way to notify the chunks that an update has happened on their border. Let's add a KeepAlive function to the world,</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorld.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-f">GetChunk</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>and for now just edit MoveCell in the SandWorker to use it.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorker.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yto</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-r">int </span><span class="code-v">pingX </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-v">pingY </span><span class="code-s">= </span><span class="code-d">0;
+ 
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_x</span><span class="code-s">)                         </span><span class="code-v">pingX </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_x </span><span class="code-s">+ </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_width  </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-v">pingX </span><span class="code-s">=  </span><span class="code-d">1;
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">y </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_y</span><span class="code-s">)                         </span><span class="code-v">pingY </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">y </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_y </span><span class="code-s">+ </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">m_height </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-v">pingY </span><span class="code-s">=  </span><span class="code-d">1;
+ 
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">pingX </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">)               </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-v">pingX</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">pingY </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">)               </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">,         </span><span class="code-a">y </span><span class="code-s">+ </span><span class="code-v">pingY</span><span class="code-s">);
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">pingX </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-d">0 </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-v">pingY </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-v">pingX</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">+ </span><span class="code-v">pingY</span><span class="code-s">);
+ 
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)
+		    </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">)</span><span class="code-s">)
+		</span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-w">m_chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-w">m_chunk</span><span class="code-s">, </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">);
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Now finally, let's look at what we got.</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/MfZopu-o6b4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MfZopu-o6b4?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>That's a considerable speed up! These optimizations won't have much effect if the whole screen if full of moving cells though, we'll need to look to threading to alleviate that.</p><p>This made it sound easy, but in reality, it took me a while to stamp out all the bugs. If you're following along, before we get into threading, make sure this works 100% because it's going to be impossible to debug without disabling the threading part.</p>
+			<h2 class="article-subtitle mark-section" id=Threading>
+				Threading
+				<a class="article-subtitle-id-link" href="#Threading">#</a>
+			</h2>
+		<p>Now we can get to the fun part, threading it all together. Multi-threading is tough because if you're not careful, race conditions can sneak in unexpectedly. Instead of a normal logic error that will cause a consistent problem, you could get random crashes. This makes these types of bugs hard to find if you're not sure where to look. Because of this, it's best to keep the threading code as concise as possible. Luckily for us this code is quite small, and not very interconnected, so it shouldn't be too bad.</p><p>Currently, we update each chunk one-by-one, but chunks are mostly independent from one another. This makes them perfect candidates for thread pooling!</p><p>The idea of a thread pool is to queue up a series of tasks and execute as many at a time as there are threads in the pool. In my code, I've got a thread pool variable named Task. You can checkout a simple implementation of one <a class="underline" target="_blank" href="https://github.com/progschj/ThreadPool/blob/9a42ec1329f259a5f4881a291db1dcb8f2ad9040/ThreadPool.h">here</a></p><p>Let's edit the Update function to use this thread pool.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SomeClass.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-w">Task</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">queue</span><span class="code-s">(</span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-t">SimpleSandWorker</span><span class="code-s">(</span><span class="code-w">m_world</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">)</span><span class="code-s">.</span><span class="code-f">UpdateChunk</span><span class="code-s">(</span><span class="code-s">);
+	</span><span class="code-s">}</span><span class="code-s">);
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>And we're done, let's see a demo!</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/OXop-HK18So.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/OXop-HK18So?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>Well if only it was that simple, right?</p><p>There are many issues with this code, if we look at the execution line by line, notice that the current thread only pushes tasks onto the queue, leaving the chunk updates to finish sometime in the future. Before that can happen, we start calling CommitCells. This causes race conditions all over the place, and an inevitable crash.</p><p>To fix this we need a way to wait for all the chunks to finish. C++ provides the std:: condition_variable class, which we can use to pause a thread until a condition is met, and the std::mutex class which allows us to mark critical sections for the OS to guard. Only one thread can run critical sections protected by a specific mutex at a time which allows us to safely edit shared variables in different threads.</p><p>To make these changes we'll need three variables: one condition variable, one mutex, and a count of chunks to update. After updating the chunk, we'll lock and decrement the count. We'll use a std::unique_lock and pass it the mutex. This locks the mutex until it pops off the stack, so we can use a scope and make it a one-liner. After we get the correct count, let's tie it all together with a condition variable. These act like messengers between threads; we can send notifications to a waiting thread by calling notify_one. Calling wait, blocks the thread until it receives a notification. Once it does, and the condition is met, it continues onwards with the mutex locked.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SomeClass.h</p>
+				<pre class="article-code-text cpp">
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">mutex </span><span class="code-v">mutex;
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">condition_variable </span><span class="code-v">cond;
+		</span><span class="code-r">int </span><span class="code-v">chunkCount </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">.size</span><span class="code-s">(</span><span class="code-s">);
+ 
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-w">Task</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">queue</span><span class="code-s">(</span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-t">SimpleSandWorker</span><span class="code-s">(</span><span class="code-w">m_world</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">)</span><span class="code-s">.</span><span class="code-f">UpdateChunk</span><span class="code-s">(</span><span class="code-s">);
+ 
+				</span><span class="code-s">{ </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-v">mutex</span><span class="code-s">); </span><span class="code-v">chunkCount</span><span class="code-s">-</span><span class="code-s">-; </span><span class="code-s">}
+				</span><span class="code-v">cond</span><span class="code-s">.</span><span class="code-f">notify_one</span><span class="code-s">(</span><span class="code-s">);
+			</span><span class="code-s">}</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-s">{
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-v">mutex</span><span class="code-s">);
+			</span><span class="code-v">cond</span><span class="code-s">.</span><span class="code-f">wait</span><span class="code-s">(</span><span class="code-v">lock</span><span class="code-s">, </span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-v">chunkCount </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-s">}</span><span class="code-s">);
+		</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>We can also multithread the CommitCells function in much the same way. Before we do that, to keep the code clean, I am going to throw this loop into a lambda called doForAllChunks. Then we can make two calls to it, one for the updating and the other for the commitment.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SomeClass.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-c">// Draw cells with mouse
+		</span><span class="code-c">// Paste tiles
+ 
+		</span><span class="code-c">// Update cells
+ 
+		</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">RemoveEmptyChunks</span><span class="code-s">(</span><span class="code-s">);
+ 
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">mutex </span><span class="code-v">mutex;
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">condition_variable </span><span class="code-v">cond;
+ 
+		</span><span class="code-r">auto </span><span class="code-v">doForAllChunks </span><span class="code-s">= </span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">function</span><span class="code-s">&lt</span><span class="code-r">void</span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-s">&gt </span><span class="code-a">func</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-r">int </span><span class="code-v">chunkCount </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">);
+		
+			</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-w">Task</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">queue</span><span class="code-s">(</span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-v">chunk</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
+					</span><span class="code-a">func</span><span class="code-s">(</span><span class="code-v">chunk</span><span class="code-s">);
+ 
+					</span><span class="code-s">{ </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-v">mutex</span><span class="code-s">); </span><span class="code-v">chunkCount</span><span class="code-s">-</span><span class="code-s">-; </span><span class="code-s">}
+					</span><span class="code-v">cond</span><span class="code-s">.</span><span class="code-f">notify_one</span><span class="code-s">(</span><span class="code-s">);
+				</span><span class="code-s">}</span><span class="code-s">);
+			</span><span class="code-s">}
+ 
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-v">mutex</span><span class="code-s">);
+			</span><span class="code-v">cond</span><span class="code-s">.</span><span class="code-f">wait</span><span class="code-s">(</span><span class="code-v">lock</span><span class="code-s">, </span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-v">chunkCount </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-s">}</span><span class="code-s">);
+		</span><span class="code-s">};
+ 
+		</span><span class="code-v">doForAllChunks</span><span class="code-s">(</span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">chunk</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-t">SimpleSandWorker</span><span class="code-s">(</span><span class="code-w">m_world</span><span class="code-s">, </span><span class="code-a">chunk</span><span class="code-s">)</span><span class="code-s">.</span><span class="code-f">UpdateChunk</span><span class="code-s">(</span><span class="code-s">);
+		</span><span class="code-s">}</span><span class="code-s">);
+ 
+		</span><span class="code-v">doForAllChunks</span><span class="code-s">(</span><span class="code-s">[</span><span class="code-s">&</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">chunk</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-a">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">CommitCells</span><span class="code-s">(</span><span class="code-s">);
+		</span><span class="code-s">}</span><span class="code-s">);
+ 
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">: </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_chunks</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">chunk</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">UpdateRect</span><span class="code-s">(</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-c">// Copy sand colors to a texture
+		</span><span class="code-c">// Draw the texture on the screen
+		</span><span class="code-c">// Remove tiles
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Let's see what happens when we run it now.</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/gOAnfB8ylGg.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/gOAnfB8ylGg?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>It seems stable, but eventually it crashes. Why could this be? Well we didn't account for the different threads calling back to the world and into other chunks. Those other chunks could be getting updated at the same time, creating more race conditions.</p><p>We need to consider who could be calling what functions in the SandChunk and SandWorld, and make sure to guard the ones that multiple threads could call at the same time.</p><p>Let's start with the functions in the SandChunk. Multiple threads could collide inside of SetCell, MoveCell, and KeepAlive, so we'll need three mutexes.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">mutex </span><span class="code-w">m_filledCellCountMutex;
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">mutex </span><span class="code-w">m_changesMutex;
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">mutex </span><span class="code-w">m_workingRectMutex;
+</span></pre>
+			</div>
+		<p>In SetCell, we only need to guard the filled cell count because no two cells in the array will get written/read at the same time. This is guaranteed by the way that CommitCells works, and we won't be drawing with the mouse during the update.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">index</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-v">dest </span><span class="code-s">= </span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-a">index</span><span class="code-s">];
+ 
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-v">dest</span><span class="code-s">.Type </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY
+			</span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">.Type </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY</span><span class="code-s">)  </span><span class="code-c">// Filling a cell
+		</span><span class="code-s">{
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-w">m_filledCellCountMutex</span><span class="code-s">);
+			</span><span class="code-w">m_filledCellCount</span><span class="code-s">+</span><span class="code-s">+;
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">else 
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-v">dest</span><span class="code-s">.Type </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY
+			</span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">.Type </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY</span><span class="code-s">) </span><span class="code-c">// Removing a filled cell
+		</span><span class="code-s">{
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-w">m_filledCellCountMutex</span><span class="code-s">);
+			</span><span class="code-w">m_filledCellCount</span><span class="code-s">-</span><span class="code-s">-;
+		</span><span class="code-s">}
+ 
+		</span><span class="code-v">dest </span><span class="code-s">= cell;
+ 
+		</span><span class="code-f">KeepAlive</span><span class="code-s">(</span><span class="code-a">index</span><span class="code-s">);
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>In MoveCell, we need to lock the whole list unfortunately, but this should only be in conflict when a chunk tries to move a particle into a neighboring chunk, which is a low percentage of the moves.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void </span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-a">source</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yto</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-t">size_t </span><span class="code-v">src </span><span class="code-s">= source</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">);
+		</span><span class="code-t">size_t </span><span class="code-v">dst </span><span class="code-s">= </span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">);
+ 
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-w">m_changesMutex</span><span class="code-s">);
+ 
+		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-a">source</span><span class="code-s">, </span><span class="code-v">src</span><span class="code-s">, </span><span class="code-v">dst</span><span class="code-s">);
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Finally, we need to also lock the KeepAlive function.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandChunk.h</p>
+				<pre class="article-code-text cpp">
+	</span><span class="code-r">void KeepAlive</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">index</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">int </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-a">index % </span><span class="code-w">m_width;
+		</span><span class="code-r">int </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-a">index </span><span class="code-s">/ </span><span class="code-w">m_width;
+ 
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-w">m_workingRectMutex</span><span class="code-s">);
+ 
+		</span><span class="code-w">m_minXw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">- </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_minXw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_width</span><span class="code-s">);
+		</span><span class="code-w">m_minYw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-v">y </span><span class="code-s">- </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_minYw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_height</span><span class="code-s">);
+		</span><span class="code-w">m_maxXw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">max</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_maxXw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_width</span><span class="code-s">);
+		</span><span class="code-w">m_maxYw </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-f">max</span><span class="code-s">(</span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-w">m_maxYw</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-w">m_height</span><span class="code-s">);
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>In the SandWorld we could use two mutexes to guard the list and map but guarding the whole map every time it needs to be accessed will cripple the multithreaded performance. To get around this we can use a concurrent map, I saw that Microsoft provides a concurrent_unordered_map, so I just replaced the current map with it. Basically, this locks the buckets instead of the whole container, so more threads can key into it at once. We need to lock the list though, but we never use it for access besides iteration, so we only need to lock when inserting into it as multiple threads could be creating chunks at the same time.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">SandWorld.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-a">#include </span><span class="code-l">&ltconcurrent_unordered_map</span><span class="code-s">.h</span><span class="code-s">&gt
+ 
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-w">Concurrency</span><span class="code-s">::</span><span class="code-t">concurrent_unordered_map</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt</span><span class="code-s">, </span><span class="code-t">SandChunk</span><span class="code-s">*</span><span class="code-s">, </span><span class="code-t">pair_hash</span><span class="code-s">&gt </span><span class="code-w">m_chunkLookup;
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">mutex </span><span class="code-w">m_chunkMutex;
+ 
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-f">CreateChunk</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-a">location</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">lx</span><span class="code-s">, </span><span class="code-v">ly</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-a">location;
+ 
+		</span><span class="code-j">if </span><span class="code-s">(   </span><span class="code-v">lx </span><span class="code-s">&lt </span><span class="code-s">-</span><span class="code-d">50 </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">ly </span><span class="code-s">&lt </span><span class="code-s">-</span><span class="code-d">50
+			</span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">lx </span><span class="code-s">&gt  </span><span class="code-d">50 </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">ly </span><span class="code-s">&gt  </span><span class="code-d">50</span><span class="code-s">) </span><span class="code-c">// could pass in a world limit to constructor
+		</span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">nullptr;
+		</span><span class="code-s">}
+ 
+		</span><span class="code-t">SandChunk</span><span class="code-s">* </span><span class="code-v">chunk </span><span class="code-s">= </span><span class="code-r">new </span><span class="code-t">SandChunk</span><span class="code-s">(</span><span class="code-w">m_chunkWidth</span><span class="code-s">, </span><span class="code-w">m_chunkHeight</span><span class="code-s">, lx</span><span class="code-s">, ly</span><span class="code-s">);
+ 
+		</span><span class="code-w">m_chunkLookup</span><span class="code-s">.</span><span class="code-f">insert</span><span class="code-s">(</span><span class="code-s">{ </span><span class="code-a">location</span><span class="code-s">, </span><span class="code-v">chunk </span><span class="code-s">}</span><span class="code-s">);
+ 
+		</span><span class="code-s">{
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">unique_lock </span><span class="code-v">lock</span><span class="code-s">(</span><span class="code-w">m_chunkMutex</span><span class="code-s">);
+			</span><span class="code-w">m_chunks</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">chunk</span><span class="code-s">);
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-v">chunk;
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>That should be all for multithreading! Let's take a look at the performance.</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="/thumbnails/0k4DKajj_ZM.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0k4DKajj_ZM?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>Look at that frame time! I think this is a good basis for a strong sand engine. Now I am going to try and build a game with it, so expect a few dev logs about that. I was hoping to make a game in a month but including engine dev time I'm already way past that, so we'll pause the clocks and I'll try and do some sort of weekly thing if I can, I think that'll be interesting. I tried making that space game I was taking about, and it was actually pretty cool, but there wasn't too much sand involved unfortunately, so I am going to try and repurpose the mechanics from it into something on the ground instead of in space.</p>
+			
+			<div class="article-comment-section">
+				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
+				<br />
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=falling-sand-worlds"></iframe>
+				<script src="/scripts/resize_comment_section.js"></script>
+			</div>
+	   
+		</div>
+	</div>
+
+	<script src="/scripts/swap_iframe.js"></script>
+</body>
+
+</html>

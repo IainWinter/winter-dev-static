@@ -1,23 +1,24 @@
 ---
 title: Making games with Falling Sand part 1
+slug: falling-sand
 date: December 30, 2020
 thumbnail: wZJCQQPaGZI.jpg
 published: true
 ---
 
-# Making games with Falling Sand part 1
+[title](Making games with Falling Sand part 1)
 
-![iframe-youtube-video](https://www.youtube.com/embed/wZJCQQPaGZI?start=6&rel=0 "Making games with Falling Sand part 1")
+[iframe-youtube-video](https://www.youtube.com/embed/wZJCQQPaGZI?start=6&rel=0)
 
-Simulating falling sand is no different from any other cellular automata. We have a big gird of cells and a set of rules that get applied to each cell every frame. You’ve probably heard of the [Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). In that cellular automata, the rules are based on the number of neighbors surrounding a cell. For falling sand, we mostly look at if there is empty space below a cell for it to move into. This creates the look of particles cascading down.
+Simulating falling sand is no different from any other cellular automata. We have a big gird of cells and a set of rules that get applied to each cell every frame. You've probably heard of the [link](Game of Life, https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). In that cellular automata, the rules are based on the number of neighbors surrounding a cell. For falling sand, we mostly look at if there is empty space below a cell for it to move into. This creates the look of particles cascading down.
 
-One of the more interesting aspects of cellular automata is how complex behavior can emerge from such simple rules. That sounds like an interesting project could be created from only a few lines of code! Let’s look at how you could go about making one of these in the Java version of Processing. You can download Processing [here](https://processing.org/) if you want to follow along.
+One of the more interesting aspects of cellular automata is how complex behavior can emerge from such simple rules. That sounds like an interesting project could be created from only a few lines of code! Let's look at how you could go about making one of these in the Java version of Processing. You can download Processing [link](here, https://processing.org/) if you want to follow along.
 
-## Java version
+[sub-title](Java version)
 
-We’ll start with the standard setup and draw functions. Before we fill these in, we should establish what our particles will be. For simplicity, color will determine the particle types, so let’s define some colors at the top.
+We'll start with the standard setup and draw functions. Before we fill these in, we should establish what our particles will be. For simplicity, color will determine the particle types, so let's define some colors at the top.
 
-~~~sketch.pde processing
+[code](sketch.pde, processing,
 `t`color `w`_EMPTY = `f`color(0);
 `t`color `w`_SAND  = `f`color(255, 150, 50);
 
@@ -26,42 +27,42 @@ void `m`setup() {
 
 void `m`draw() {
 }
-~~~
+)
 
 In setup we need to set the size and background. I like to use a size of 800x800 pixels, and we need to set the background to the empty particle color. We should also uncap the framerate from 60 to allow this to run faster if it can.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
 void `m`setup() {
   `f`size(800, 800);
   `f`background(`w`_EMPTY);
   `f`frameRate(1000);
 }
-~~~
+)
 
-Each time the draw function is called we will step our simulation. Because we are only using color, let’s use the pixels array as the storage for our cells. Each frame we need to call loadPixels to copy the displayed frame into the pixels array. This first frame will be all  _EMPTY because we called background.
+Each time the draw function is called we will step our simulation. Because we are only using color, let's use the pixels array as the storage for our cells. Each frame we need to call loadPixels to copy the displayed frame into the pixels array. This first frame will be all  _EMPTY because we called background.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
 void `m`draw() {
   `f`loadPixels();
-~~~
+)
 
 After we load the pixels, we can iterate over them and check if they match a particle type that we know about.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
   for (int `v`x = 0; `v`x < width;  `v`x++)
   for (int `v`y = 0; `v`y < height; `v`y++) {
     `t`color `v`cell = `f`get(`v`x, `v`y);
     
     if (`v`cell == `w`_SAND) {
-~~~
+)
 
-We want sand to form dune like shapes, so let’s encode a pyramid into its rules. We need to check directly below, down to the left, and down to the right.
+We want sand to form dune like shapes, so let's encode a pyramid into its rules. We need to check directly below, down to the left, and down to the right.
 
-![article-embed-half](/articles/falling-sand-simulations/sand.png "Sand.png")
+[img-half](/articles/falling-sand-simulations/sand.png)
 
-By default, it should move down if possible, but if that cell is occupied, we’ll check the other two directions.
+By default, it should move down if possible, but if that cell is occupied, we'll check the other two directions.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
 		boolean `v`down  = `w`isEmpty(`v`x,     `v`y + 1);
 		boolean `v`left  = `w`isEmpty(`v`x - 1, `v`y + 1);
 		boolean `v`right = `w`isEmpty(`v`x + 1, `v`y + 1);
@@ -74,45 +75,47 @@ By default, it should move down if possible, but if that cell is occupied, we’
 			`w`setCell(`v`x, `v`y, `w`_EMPTY); 
 		}
 	}
-~~~
+)
 
 This looks ok, but the order of if statements matters. Because we put the left check before right, if both spaces are open, the particle will always move left. This creates an artificial look, but we can easily fix it by adding a little randomness to shuffle the direction if both cells are empty.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
 	if (`v`left && `v`right) {
 		boolean `v`rand = `f`random(1) > .5;
 		`v`left  = `v`rand;
 		`v`right = !`v`rand;
 	}
-~~~
+)
 
 Finally, we can close the for loops and call updatePixels to copy our frame to the display.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
 	}
 
 	`f`updatePixels();
 }
-~~~
+)
 
 To draw particles on the screen with the mouse, we can add these lines after loadPixels.
 
-~~~sketch.pde processing no_title
+[code](sketch.pde_, processing,
 	if (`p`mousePressed) {
 		for (int `v`x = 0; `v`x < 1; `v`x++)
 		for (int `v`y = 0; `v`y < 1; `v`y++) {
 			`w`setCell(`p`mouseX + `v`x, `p`mouseY + `v`y, `w`_SAND);
 		}
 	}
-~~~
+)
 
-You can create other particle types by adding more rules in a similar way. For example, water and a stationary barrier type are the most straight forward and where I would start. Water is like sand, but we check directly to the left and right instead of diagonal, which gives the effect of liquid flow. Barriers have no movement properties but fill space so the other types can’t move through them.
+You can create other particle types by adding more rules in a similar way. For example, water and a stationary barrier type are the most straight forward and where I would start. Water is like sand, but we check directly to the left and right instead of diagonal, which gives the effect of liquid flow. Barriers have no movement properties but fill space so the other types can't move through them.
 
-### Common issues
+[img-half](/articles/falling-sand-simulations/water.png)
 
-I saved the helper functions for last to highlight two common issues. The biggest gotcha with these types of simulations is that the order of iteration effects the behavior dramatically, and if we aren’t careful, we could end up updating particles multiple times or even lose them entirely.
+[sub-title2](Common issues)
 
-~~~sketch.pde processing
+I saved the helper functions for last to highlight two common issues. The biggest gotcha with these types of simulations is that the order of iteration effects the behavior dramatically, and if we aren't careful, we could end up updating particles multiple times or even lose them entirely.
+
+[code](sketch.pde, processing,
 boolean `w`inBounds(int `a`x, int `a`y) {
   return `a`x >= 0    && `a`y >= 0
       && `a`x < `p`width && `a`y < `p`height;
@@ -125,31 +128,41 @@ boolean `w`isEmpty(int `a`x, int `a`y) {
 void `w`setCell(int `a`x, int `a`y, color `a`cell) {
   `p`pixels[`a`x + `a`y * `p`width] = `a`cell;
 }
-~~~
+)
 
-We have four options for how we order the iteration. No matter which we pick, there will always be slight issues. Let’s see why.
+We have four options for how we order the iteration. No matter which we pick, there will always be slight issues. Let's see why.
 
 If we iterate top to bottom, we end up updating the same particle multiple times. This results in a teleportation effect where a particle will only take a single frame to reach the floor. We could change the iteration to bottom to top, but then if we want particles that moves up, we run into the same issue. This highlights the fact that no matter which direction we pick, there will always be issues. Clearly, the solution must have more to it than just finding a magic ordering...
 
-![iframe-youtube-video](https://www.youtube.com/embed/rh_AZGzRTcQ?rel=0 "teleport")
+[iframe-youtube-video](https://www.youtube.com/embed/rh_AZGzRTcQ?rel=0)
 
-The band aid solution in this Processing version comes from the subtle details of how the pixel array works. In the helper functions we read and write to the pixels array, but in draw we use the get function. Even though the docs don’t say this, get must read from the displayed pixels array, which we don’t update until we call updatePixels. This allows us to dodge the issue of updating particles multiple times because nothing updates until the end of the frame from get’s perspective.
+The band aid solution in this Processing version comes from the subtle details of how the pixel array works. In the helper functions we read and write to the pixels array, but in draw we use the get function. Even though the docs don't say this, get must read from the displayed pixels array, which we don't update until we call updatePixels. This allows us to dodge the issue of updating particles multiple times because nothing updates until the end of the frame from get's perspective.
 
-The second problem we can only mitigate. In isEmpty we don’t use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we’ve somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.
+The second problem we can only mitigate. In isEmpty we don't use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we've somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.
 
-Now that we have an idea of how the basics work, and common pitfalls, let’s jump over to C++ and see how these can be solved.
+[img-half](/articles/falling-sand-simulations/conflict.png)
 
-## C++ Version
+Now that we have an idea of how the basics work, and common pitfalls, let's jump over to C++ and see how these can be solved.
 
-I plan on expanding this over the next few videos, so I am going to try and make it more of a general sand framework. To start, we don’t want to edit the pixels directly because we want more properties than just color. Let’s make a CellType enum and store it in a Cell struct along with a Color. In the first version, sand and water both needed to check if the space directly below was free. This hints that the ways that the particles move doesn’t have to reflect their type. So, let’s keep two enums in each Cell, one for the movement properties and another the type. If we use a bit string for the properties, they can be combined to create more complex patterns.
+[sub-title](C++ Version)
 
-~~~Cell.h cpp
+I plan on expanding this over the next few videos, so I am going to try and make it more of a general sand framework. To start, we don't want to edit the pixels directly because we want more properties than just color. Let's make a CellType enum and store it in a Cell struct along with a Color. In the first version, sand and water both needed to check if the space directly below was free. This hints that the ways that the particles move doesn't have to reflect their type. So, let's keep two enums in each Cell, one for the movement properties and another the type. If we use a bit string for the properties, they can be combined to create more complex patterns.
+
+[code](Cell.h, cpp,
 enum `t`CellProperties {
-	`d`NONE                = 0b00000000,
-	`d`MOVE_DOWN           = 0b00000001,
-	`d`MOVE_DOWN_SIDE      = 0b00000010,
-	`d`MOVE_SIDE           = 0b00000100
+	`d`NONE           = 0b00000000,
+	`d`MOVE_DOWN      = 0b00000001,
+	`d`MOVE_DOWN_SIDE = 0b00000010,
+	`d`MOVE_SIDE      = 0b00000100
 };
+
+inline `t`CellProperties operator|(`t`CellProperties `a`a, `t`CellProperties `a`b) {
+	return `t`CellProperties((int)`a`a | (int)`a`b);
+}
+ 
+inline auto operator&(`t`CellProperties `a`a, `t`CellProperties `a`b) {
+	return (int)`a`a & (int)`a`b;
+}
 
 enum `t`CellType {
 	`d`EMPTY,
@@ -164,11 +177,11 @@ struct `t`Cell {
 
 	`t`Color `w`Color; // rgba
 };
-~~~
+)
 
-Now that we have defined our Cell, we need a way to store them. Let’s make a new class called SandWorld and store an array of Cells in it. In the constructor we can specify a width, height, and scale in pixels. This will allow us to easily change the size of the cells.
+Now that we have defined our Cell, we need a way to store them. Let's make a new class called SandWorld and store an array of Cells in it. In the constructor we can specify a width, height, and scale in pixels. This will allow us to easily change the size of the cells.
 
-~~~SandWorld.h cpp
+[code](SandWorld.h, cpp,
 class `t`SandWorld {
 public:
 	const size_t m_width  = 0;
@@ -189,11 +202,11 @@ public:
 	`f`~SandWorld() {
 		delete[] m_cells;
 	}
-~~~
+)
 
-We’ll need some functions for getting the cells out of the world, let’s add two: one that takes x and y coordinates, and another that takes a flat index.
+We'll need some functions for getting the cells out of the world, let's add two: one that takes x and y coordinates, and another that takes a flat index.
 
-~~~SandWorld.h cpp no_title
+[code](SandWorld.h_, cpp,
 	const `t`Cell& `f`GetCell(size_t `a`index) {
 		return m_cells[`a`index]; 
 	}
@@ -205,11 +218,11 @@ We’ll need some functions for getting the cells out of the world, let’s add 
 	size_t `f`GetIndex(size_t `a`x, size_t `a`y) {
 		return `a`x + `a`y * m_width;
 	}
-~~~
+)
 
-And to get us back to where we were, let’s add the same helper functions from before.
+And to get us back to where we were, let's add the same helper functions from before.
 
-~~~SandWorld.h cpp no_title
+[code](SandWorld.h_, cpp,
 	bool `f`InBounds(size_t `a`x, size_t `a`y) {
 		return `a`x < m_width 
 			&& `a`y < m_height;
@@ -223,13 +236,13 @@ And to get us back to where we were, let’s add the same helper functions from 
 	void `f`SetCell(size_t `a`x, size_t `a`y, const `t`Cell& `a`cell) {
 		m_cells[GetIndex(`a`x, `a`y)] = `a`cell;
 	}
-~~~
+)
 
-Processing gave us two arrays to work with, but before we just add another one and call it a day, let’s think about a way to actually solve the issues that arise from the iteration ordering. The main problem is that moves are executed as they come, but really, we should gather all the possible moves, then execute them at the end to give each one a fair chance.
+Processing gave us two arrays to work with, but before we just add another one and call it a day, let's think about a way to actually solve the issues that arise from the iteration ordering. The main problem is that moves are executed as they come, but really, we should gather all the possible moves, then execute them at the end to give each one a fair chance.
 
-Let’s add a vector to the SandWorld, and make a new function called MoveCell that adds a move to the list.
+Let's add a vector to the SandWorld, and make a new function called MoveCell that adds a move to the list.
 
-~~~SandWorld.h cpp no_title
+[code](SandWorld.h_, cpp,
 	std::vector<std::pair<size_t, size_t>> m_changes; // destination, source
 
 	void `f`MoveCell(size_t `a`x, size_t `a`y, size_t `a`xto, size_t `a`yto)
@@ -239,11 +252,11 @@ Let’s add a vector to the SandWorld, and make a new function called MoveCell t
 			`f`GetIndex(`a`x,   `a`y)
 		);
 	}
-~~~
+)
 
 After we finish iterating over our cells, we can apply the changes. First, we need to remove any changes that were filled between frames by the SetCell function.
 
-~~~SandWorld.h cpp no_title
+[code](SandWorld.h_, cpp,
 	void `f`CommitCells() {
 		// remove moves that have their destinations filled
 
@@ -253,21 +266,21 @@ After we finish iterating over our cells, we can apply the changes. First, we ne
 				`v`i--;
 			}
 		}
-~~~
+)
 
 Then we need to sort the list of moves by their destination. This is an unfortunate slowdown but allows us to add and choose moves quicker. We could use a multimap, but the slowdown from accessing the linked lists outweighs the sort.
 
-~~~SandWorld.h cpp no_title
+[code](SandWorld.h_, cpp,
 		// sort by destination
 
 		std::`f`sort(m_changes.begin(), m_changes.`f`end(),
 			[](auto& `a`a, auto& `a`b) { return `a`a.`w`first < `a`b.`w`first; }
 		);
-~~~
+)
 
-Then we can iterate over the sorted moves. Each time the destination changes, we’ll pick a random source to move from. This allows each particle to get a fair chance at moving into to a cell. Finally, we’ll clear the list.
+Then we can iterate over the sorted moves. Each time the destination changes, we'll pick a random source to move from. This allows each particle to get a fair chance at moving into to a cell. Finally, we'll clear the list.
 
-~~~SandWorld.h cpp no_title
+[code](SandWorld.h_, cpp,
 		// pick random source for each destination
 
 		size_t `v`iprev = 0;
@@ -291,13 +304,13 @@ Then we can iterate over the sorted moves. Each time the destination changes, we
 		m_changes.`f`clear();
 	}
 };
-~~~
+)
 
-That’s it for the core of our little framework, let’s see how we can use it to make what we had in the Processing version. I am going to skip over the rendering details because C++ makes that really annoying. I suggest checking out [SDL](https://www.libsdl.org/) if you don't already have your own solution.
+That's it for the core of our little framework, let's see how we can use it to make what we had in the Processing version. I am going to skip over the rendering details because C++ makes that really annoying. I suggest checking out [link](SDL, https://www.libsdl.org/) if you don't already have your own solution.
 
-In an Update function, we’ll iterate over the cells in a similar way as before, but now that we have a bit string of movement properties, we can check each one until its respective MoveX function returns true.
+In an Update function, we'll iterate over the cells in a similar way as before, but now that we have a bit string of movement properties, we can check each one until its respective MoveX function returns true.
 
-~~~Main.cpp cpp
+[code](Main.cpp, cpp,
 `t`SandWorld m_world = `t`SandWorld(1920, 1080, 2);
 
 void `f`Update() {
@@ -307,7 +320,7 @@ void `f`Update() {
 	for (size_t `v`y = 0; `v`y < m_world.m_height; `v`y++) {
 		const `t`Cell& `v`cell = m_world.`f`GetCell(`v`x, `v`y);
 
-			 if (`v`cell.`w`Props & `t`CellProperties::`d`MOVE_DOWN      && `f`MoveDown    (`v`x, `v`y, `v`cell)) {}
+			if (`v`cell.`w`Props & `t`CellProperties::`d`MOVE_DOWN      && `f`MoveDown    (`v`x, `v`y, `v`cell)) {}
 		else if (`v`cell.`w`Props & `t`CellProperties::`d`MOVE_DOWN_SIDE && `f`MoveDownSide(`v`x, `v`y, `v`cell)) {}
 		else if (`v`cell.`w`Props & `t`CellProperties::`d`MOVE_SIDE      && `f`MoveSide    (`v`x, `v`y, `v`cell)) {}
 	}
@@ -317,11 +330,11 @@ void `f`Update() {
 	// Update the sand texture
 	// Draw the sand to the screen
 }
-~~~
+)
 
 We can make a function for each movement property that will return true if it finds a valid move.
 
-~~~Main.cpp cpp no_title
+[code](Main.cpp_, cpp,
 bool `f`MoveDown(size_t `a`x, size_t `a`y, const Cell& `a`cell)
 {
 	bool `v`down = m_world.`f`IsEmpty(`a`x, `a`y - 1);
@@ -338,20 +351,20 @@ bool `f`MoveDownSide(size_t `a`x, size_t `a`y, const Cell& `a`cell)
 	bool `v`downRight = m_world.`f`IsEmpty(`a`x + 1, `a`y - 1);
 
 	if (`v`downLeft && `v`downRight) {
-		`v`downLeft  = rand_float() > 0;
+		`v`downLeft  = `f`rand_float() > 0;
 		`v`downRight = !`v`downLeft;
 	}
 
-		 if (`v`downLeft)  m_world.`f`MoveCell(`a`x, `a`y, `a`x - 1, `a`y - 1);
+		if (`v`downLeft)  m_world.`f`MoveCell(`a`x, `a`y, `a`x - 1, `a`y - 1);
 	else if (`v`downRight) m_world.`f`MoveCell(`a`x, `a`y, `a`x + 1, `a`y - 1);
 
 	return `v`downLeft || `v`downRight;
 }
-~~~
+)
 
 To draw particles with the mouse, we can create some defaults in an Init function...
 
-~~~Main.cpp cpp no_title
+[code](Main.cpp_, cpp,
 `t`Cell `w`_EMPTY, `w`_SAND, `w`_WATER, `w`_ROCK;
 	
 void `f`Initialize() { 
@@ -381,11 +394,11 @@ void `f`Initialize() {
 	
 	// Init a texture for sand...
 }
-~~~
+)
 
-Then at the top of our update function, we’ll add these lines.
+Then at the top of our update function, we'll add these lines.
 
-~~~Main.cpp cpp no_title
+[code](Main.cpp_, cpp,
 void `f`Update() {
 	if (`t`Mouse::`f`ButtonDown(`d`LMOUSE)) {
 		`t`vector2 `v`pos = `t`Mouse::`f`ScreenPos() / m_world.m_scale;
@@ -393,7 +406,7 @@ void `f`Update() {
 
 		`t`Cell `v`placeMe = _EMPTY;
 
-			 if (`t`Keyboard::`f`KeyDown(`d`S)) `v`placeMe = `w`_SAND;
+			if (`t`Keyboard::`f`KeyDown(`d`S)) `v`placeMe = `w`_SAND;
 		else if (`t`Keyboard::`f`KeyDown(`d`W)) `v`placeMe = `w`_WATER;
 		else if (`t`Keyboard::`f`KeyDown(`d`R)) `v`placeMe = `w`_ROCK;
 
@@ -411,23 +424,23 @@ void `f`Update() {
 	// Copy sand colors to a texture
 	// Draw the texture on the screen
 }
-~~~
+)
 
-The last thing I want to cover is about making games inside of these simulations. Let’s think about the most basic feature we need, then in future posts I’ll expand on this.
+The last thing I want to cover is about making games inside of these simulations. Let's think about the most basic feature we need, then in future posts I'll expand on this.
 
-Having a player that moves around seems like a good place to start, so let’s think about how that might work. We’ll need some notion of a group of particles that can move together. Let’s make a Tile struct that holds a list of positions for its particles, and a position for the group itself. For now, we’ll just use the _ROCK particle for everything in the tile.
+Having a player that moves around seems like a good place to start, so let's think about how that might work. We'll need some notion of a group of particles that can move together. Let's make a Tile struct that holds a list of positions for its particles, and a position for the group itself. For now, we'll just use the _ROCK particle for everything in the tile.
 
-~~~Tile.h cpp
+[code](Tile.h, cpp,
 struct `t`Tile {
 	std::vector<std::pair<int, int>> `w`Positions;
 	int `w`X = 0;
 	int `w`Y = 0;
 };
-~~~
+)
 
-Before we update the world, we need to paste the tile particles in, so let’s put these lines in the Update function before the main loops. After we’ve called CommitCells and updated the texture, we can remove the tiles by setting their cells to _EMPTY.
+Before we update the world, we need to paste the tile particles in, so let's put these lines in the Update function before the main loops. After we've called CommitCells and updated the texture, we can remove the tiles by setting their cells to _EMPTY.
 
-~~~main.cpp cpp
+[code](Main.cpp, cpp,
 std::vector<`t`Tile> m_tiles;
 
 void `f`Update() {
@@ -461,16 +474,16 @@ void `f`Update() {
 		}
 	}
 }
-~~~
+)
 
-Finally, we can make a little ship and add some basic movement. In the Init function, we’ll make a Tile and add it to the list.
+Finally, we can make a little ship and add some basic movement. In the Init function, we'll make a Tile and add it to the list.
 
-~~~main.cpp cpp no_title
+[code](Main.cpp_, cpp,
 void `f`Initialize() { 
 	`t`Tile `v`ship = {
 		{
-						  {2,6},
-				   {1,5}, {2,5}, 
+					    {2,6},
+				  {1,5}, {2,5}, 
 			{0,4}, {1,4}, {2,4}, {3,4},
 			{0,3}, {1,3}, {2,3}, {3,3},
 			{0,2},               {3,2},
@@ -485,11 +498,11 @@ void `f`Initialize() {
 	// Create default cells
 	// Init a texture for sand...
 }
-~~~
+)
 
-In the Update function, before the world updates, we can add these lines to move our ship. It’s important to move the tiles before pasting them in so they can be removed correctly at the end.
+In the Update function, before the world updates, we can add these lines to move our ship. It's important to move the tiles before pasting them in so they can be removed correctly at the end.
 
-~~~main.cpp cpp no_title
+[code](Main.cpp_, cpp,
 void `f`Update() {
 	// Draw cells with mouse
 
@@ -504,10 +517,10 @@ void `f`Update() {
 	// Draw the texture on the screen
 	// Remove tiles
 }
-~~~
+)
 
-And that about covers it, we’re left with a decently quick simulation. On my computer this runs between 0.005 - .015 seconds per frame. Which is around 200 – 60 fps. Currently we can only use 1 thread, so if your computer has 4 cores we are only using 1/4th or more likely only 1/8th of its power :(
+And that about covers it, we're left with a decently quick simulation. On my computer this runs between 0.005 - .015 seconds per frame. Which is around 200 - 60 fps. Currently we can only use 1 thread, so if your computer has 4 cores we are only using 1/4th or more likely only 1/8th of its power :(
 
-![iframe-youtube-video](https://www.youtube.com/embed/_r8p1FOH9j0?rel=0 "Sand Demo")
+[iframe-youtube-video](https://www.youtube.com/embed/_r8p1FOH9j0?rel=0)
 
-In the next post, I am going to cover how we could make the world bigger, and how multi-threading the simulation works. Then we’ll make a game with it, so stay tuned if this seems interesting!
+In the next post, I am going to cover how we could make the world bigger, and how multi-threading the simulation works. Then we'll make a game with it, so stay tuned if this seems interesting!

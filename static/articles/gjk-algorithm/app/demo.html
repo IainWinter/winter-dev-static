@@ -215,14 +215,14 @@
 	}
 
 	function keyPressed(event) { // tolerance, effects accuracy
-		if(event.keyCode == 61) {
+		if(event.key == '+') {
 			debugIter++;
 			if(debugIter > iter) {
 				debugIter = iter;
 			}	
 		}
 
-		else if(event.keyCode == 173) {
+		else if(event.key == '-') {
 			debugIter--;
 			if(debugIter < -1) {
 				debugIter = -1;

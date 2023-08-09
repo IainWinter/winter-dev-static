@@ -1,13 +1,13 @@
 <html lang="en">
 
 <head>
-	<title>[name]()</title>
+	<title>Support</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="icon" type="image/x-icon" href="/favicon.ico">
 	<link rel="stylesheet" href="/styles/global.css" />
 	<link rel="stylesheet" href="/styles/top.css" />
+	<link rel="stylesheet" href="/styles/card.css" />
 	<link rel="stylesheet" href="/styles/article.css" />
-	<link rel="stylesheet" href="/styles/code.css" />
 </head>
 
 <script src="/scripts/no_flashbang.js"></script>
@@ -16,12 +16,12 @@
 	<div class="main">
 		[top]()
 		<div class="page">
-			[article]()
-			[comments]()
+			<div class="article-comment-section">
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=epa-algorithm"></iframe>
+				<script src="/scripts/resize_comment_section.js"></script>
+			</div>
 		</div>
 	</div>
-
-	<script src="/scripts/swap_iframe.js"></script>
 </body>
 
 </html>

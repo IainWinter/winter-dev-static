@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<body>
+	<form id="comment-form" class="comment-form">
+		<fieldset id="comment-form-set">
+			<field>
+				<label for="name">Name</label>
+				<input name="name" type="text" />
+				<p id="comment-form-name-error" class="error-text"></p>
+			</field>
+
+			<field id="comment-form-test">
+				<label for="test-answer" id="comment-form-test-question">Test answer</label>
+				<input name="test-answer" type="text" />
+				<p id="comment-form-test-answer-error" class="error-text"></p>
+			</field>
+
+			<field>
+				<label for="content">Comment</label>
+				<textarea name="content" type="textbox"></textarea>
+				<p id="comment-form-content-error" class="error-text"></p>
+			</field>
+
+			<field-bottom>
+				<span id="comment-form-status"></span>
+				<button type="submit">Submit</button>
+			</field-bottom>
+		</fieldset>
+	</form>
+
+	<div id="comment-section" class="comment-section">
+		<p id="comment-section-status"></p>
+	</div>
+
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700&display=swap');
+
+		:root {
+			--text-color: whitesmoke;
+			--link-color: cyan;
+
+			--accent-color-light: rgba(255, 255, 255, .05);
+			--accent-color: rgba(255, 255, 255, .2);
+
+			--error-color: #ff4040;
+		}
+
+		[color-theme="light"] {
+			--text-color: black;
+			--link-color: cyan;
+
+			--accent-color-light: rgba(0, 0, 0, .05);
+			--accent-color: rgba(0, 0, 0, .2);
+		}
+
+		body {
+			margin: 0;
+			padding-left: 15px;
+			color: var(--text-color);
+			font-size: 20px;
+			font-family: 'Nanum Myeongjo', serif;
+		}
+
+		fieldset {
+			border: none;
+			margin-inline: 0;
+			padding-inline: 0;
+			padding-block: 0;
+		}
+
+		field {
+			margin-bottom: 20px;
+			display: grid;
+		}
+
+		field-bottom {
+			display: flex;
+			justify-content: space-between;
+		}
+
+		input,
+		textarea,
+		button {
+			background: none;
+			border: 1px solid var(--accent-color);
+
+			color: var(--text-color);
+			font-size: 20px;
+			font-family: 'Nanum Myeongjo', serif;
+		}
+
+		input:focus,
+		textarea:focus {
+			outline: none;
+		}
+
+		textarea {
+			min-height: 100px;
+			max-height: 500px;
+			height: 100px;
+			resize: vertical;
+		}
+
+		a {
+			cursor: pointer;
+		}
+
+		a:hover {
+			text-decoration: underline;
+		}
+
+		button {
+			cursor: pointer;
+			float: right;
+   			padding: 5px 20px;
+		}
+
+		button:hover {
+			background: var(--accent-color-light);
+		}
+
+		.comment-reply {
+			opacity: .6;
+			font-size: 16px;
+		}
+
+		.error-text {
+			color: var(--error-color);
+			margin: 0;
+			margin-top: 2px;
+			margin-bottom: -16px;
+			font-size: 16px;
+			height: 16px;
+		}
+
+		.comment {
+			border-left: 1px solid var(--accent-color);
+			padding-left: 10px;
+			padding-bottom: 1px;
+			margin-left: -10px;
+    		margin-bottom: 5px;
+		}
+
+		.comment .comment {
+			margin-left: 15px;
+		}
+
+		.comment-title {
+			margin: 0;
+			margin-left: -15px;
+			padding-left: 10px;
+			border-left: 5px solid var(--text-color);
+		}
+
+		.comment-contents {
+			overflow: hidden;
+		}
+
+		.comment-editable {
+			background: var(--accent-color-light);
+		}
+	</style>
+
+</body>
+
+<script>
+	function setCookie(cname, cvalue, exminutes) 
+	{
+		const d = new Date();
+		d.setTime(d.getTime() + (exminutes*60*1000));
+		let expires = "expires="+ d.toUTCString();
+		document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+	}
+
+	function getCookie(cname)
+	{
+		let name = cname + "=";
+		let decodedCookie = decodeURIComponent(document.cookie);
+		let ca = decodedCookie.split(';');
+		
+		for(let i = 0; i <ca.length; i++) 
+		{
+			let c = ca[i];
+			
+			while (c.charAt(0) == ' ')
+				c = c.substring(1);
+
+			if (c.indexOf(name) == 0)
+				return c.substring(name.length, c.length);
+		}
+
+		return null;
+	}
+
+	function getCommentIdString(id) {
+		return `comment-${id}`;
+	}
+
+	function setParentFrameHeight() {
+		window.parent.postMessage({ reason: "setHeight", height: document.body.scrollHeight }, '*');
+	}
+
+	function askParentFrameForTheme() {
+		window.parent.postMessage({ reason: "askTheme" }, '*');
+	}
+</script>
+
+<script>
+	// There needs to be a little bit of global state to track which comment is being replyed to
+
+	let g_form = document.getElementById("comment-form");
+	let g_commentSection = document.getElementById("comment-section");
+
+	let g_formContent = g_form["content"];
+	let g_formName = g_form["name"];
+	let g_formTest = g_form["test-answer"];
+	let g_formFieldSet = g_form["comment-form-set"];
+	let g_formContentError = document.getElementById("comment-form-content-error");
+	let g_formNameError = document.getElementById("comment-form-name-error");
+	let g_formTestError = document.getElementById("comment-form-test-answer-error");
+
+	let g_currentReplyToId = 0;
+	let g_currentEditingId = 0;
+	let g_currentEditingEditKey = "";
+	let g_ownedComments = [];
+
+	let g_commentFormStatus = document.getElementById("comment-form-status");
+	let g_commentSectionStatus = document.getElementById("comment-section-status");
+
+	let g_commentFormTest = document.getElementById("comment-form-test");
+	let g_commentFormTestQuestion = document.getElementById("comment-form-test-question");
+
+	let g_commentCount = 0;
+
+	// parse the subject from the window url parmeter 'subject'
+	let g_commentSubject = new URLSearchParams(location.search).get('subject');
+
+	const g_testName = [
+		[(str) => str.length < 2 || str.length > 36, "Name must be between 2 and 36 characters long"],
+		[(str) => !/^[a-zA-Z0-9\-_'. ]*$/.test(str), "Name must only contain letters, numbers, spaces, or the special characters: ' - . _"],
+		[(str) => str.includes("  "), "Name must not contain consecutive spaces"]
+	];
+
+	const g_testTest = [
+		[(str) => str.length < 2 || str.length > 32, "Test answer must be between 2 and 32 characters long"],
+		[(str) => str.includes("  "), "Test answer must not contain consecutive spaces"]
+	];
+
+	const g_testContent = [
+		[(str) => str.length < 16 || str.length > 1024, "Comment must be between 16 and 1024 characters long"],
+		// [(str) => str.startsWith("\n") || str.endsWith("\n"), "Comment can't begin or end with a newline"],
+		[(str) => str.includes("\n\n\n"), "Comment can't have 3 newlines in a row"]
+	];
+
+	function setFieldError(input, input_error, message) {
+		input.style.border = "1px solid var(--error-color)";
+		input_error.innerHTML = message;
+	}
+
+	function validateFormInput(input, input_error, tests) {
+		input.style.border = "";
+		input_error.innerHTML = "";
+
+		for (const test of tests) {
+			if (test[0](input.value)) {
+				setFieldError(input, input_error, test[1]);
+				setParentFrameHeight();
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	function setAndReturnIsNameInvalid() {
+		return validateFormInput(g_formName, g_formNameError, g_testName);
+	}
+
+	function setAndReturnIsTestInvalid() {
+		return validateFormInput(g_formTest, g_formTestError, g_testTest);
+	}
+
+	function setAndReturnIsContentInvalid() {
+		return validateFormInput(g_formContent, g_formContentError, g_testContent);
+	}
+
+	function addValidationToFormInput(input, input_error, tests) {
+		input.addEventListener("input", (e) => {
+			validateFormInput(input, input_error, tests);
+		});
+	}
+
+	function addTabkeyToFormInput(input) {
+		input.addEventListener('keydown', (e) => {
+			if (e.keyCode === 9) {
+				e.preventDefault();
+				input.setRangeText('\t', input.selectionStart, input.selectionStart, 'end');
+			}
+		});
+	}
+
+	function setFormNameAndContent(name, content) {
+		g_formName.value = name;
+		g_formContent.value = content;
+	}
+
+	function setFormStateInitial() {
+		g_currentEditingId = 0;
+		g_currentEditingEditKey = "";
+		g_currentReplyToId = 0;
+		g_commentFormStatus.innerHTML = "Write a new comment";
+		g_commentFormTest.style.display = "grid";
+	}
+
+	function setFormStateReplying(commentId, commentName) {
+		g_currentEditingId = 0;
+		g_currentEditingEditKey = "";
+		g_currentReplyToId = commentId;
+		g_commentFormStatus.innerHTML = `Reply to ${commentName} - <a onclick="setFormStateInitial();">Cancel</a>`;
+		g_commentFormTest.style.display = "grid";
+	}
+
+	function setFormStateEditing(commentId, commentName, editKey) {
+		g_currentEditingId = commentId;
+		g_currentEditingEditKey = editKey;
+		g_currentReplyToId = 0;
+		g_commentFormStatus.innerHTML = `Edit ${commentName} - <a onclick="setFormStateInitial();">Cancel</a>`;
+		g_commentFormTest.style.display = "none";
+
+		// set form data from selected comment
+		let commentDiv = document.getElementById(getCommentIdString(commentId));
+		let name = commentDiv.children[0].children[0].innerText;
+		let content = commentDiv.children[1].innerText;
+
+		setFormNameAndContent(name, content);
+	}
+
+	function setCommentFormStatus(status) {
+		g_commentFormStatus.innerHTML = status;
+	}
+
+	function setCommentSectionStatus(status) {
+		g_commentSectionStatus.innerHTML = status;
+	}
+
+	function setCommentSectionCommentCount(count) {
+		g_commentCount = count;
+		setCommentSectionStatus(`${g_commentCount} comment${g_commentCount == 1 ? "" : "s"}`);
+	}
+
+	function setTestQuestion(testQuestion) {
+		g_commentFormTestQuestion.innerHTML = testQuestion;
+	}
+
+	function setFormLocked(locked) {
+		if (locked)
+			g_formFieldSet.setAttribute("disabled", "");
+		else
+			g_formFieldSet.removeAttribute("disabled");
+	}
+
+	function loadOwnedComments() {
+		let ownedCommentsStr = getCookie("owned_comments");
+		g_ownedComments = ownedCommentsStr ? JSON.parse(ownedCommentsStr) : [];
+	}
+
+	function addOwnedComment(comment_id, edit_key) {
+		g_ownedComments.push({ comment_id: comment_id, edit_key: edit_key });
+		setCookie("owned_comments", JSON.stringify(g_ownedComments), 15);
+	}
+</script>
+
+<script>
+	function addCommentToDOM(id, parentId, name, content, creationTime, edit_time_left) {
+		var dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+		let creationTimeDateString = new Date(creationTime).toLocaleDateString("en-US", dateOptions);
+		let ownedComment = g_ownedComments.find((comment) => comment.comment_id == id);
+
+		let userCanEdit = ownedComment && edit_time_left > 0;
+		let minutesLeft = Math.ceil(edit_time_left / 60);
+		let minutesLeftString = `${minutesLeft} minute${minutesLeft == 1 ? "" : "s"}`;
+
+		let editOrReplyLink = userCanEdit
+			? `<a onclick="setFormStateEditing(${id}, '${name}', '${ownedComment.edit_key}');">Edit</a> <span>(${minutesLeftString})</span>`
+			: `<a onclick="setFormStateReplying(${id}, '${name}');">Reply</a>`;
+
+		let editClass = userCanEdit ? "comment-editable" : "";
+
+		let html = `
+			<p class="comment-title">
+				<span>${name}</span> 
+				<span class="comment-reply"> posted on ${creationTimeDateString} - ${editOrReplyLink}</span>
+			</p> 
+			<p class="comment-contents">
+				${content}
+			</p>
+		`;
+
+		const commentDiv = document.createElement("div");
+		commentDiv.id = getCommentIdString(id);
+		commentDiv.classList = `comment ${editClass}`;
+		commentDiv.innerHTML = html;
+
+		const parentComment = document.getElementById(getCommentIdString(parentId));
+
+		if (parentComment) {
+			parentComment.appendChild(commentDiv);
+		}
+		else {
+			g_commentSection.appendChild(commentDiv);
+		}
+	}
+
+	function setCommentNameAndContent(id, name, content) {
+		let commentDiv = document.getElementById(getCommentIdString(id));
+
+		let title = commentDiv.children[0];
+		let nameSpan = title.children[0];
+		nameSpan.innerHTML = name;
+
+		let contentP = commentDiv.children[1];
+		contentP.innerHTML = content;
+	}
+</script>
+
+<script>
+	// Load the initial list of comments
+
+	setCommentFormStatus("Loading comments...");
+	
+	fetch(`http://localhost:8801/comment-get?subject=${g_commentSubject}`)
+		.then((response) => response.json())
+		.then((data) => {
+			switch (data.status) {
+				case "success":
+					setCommentFormStatus("Write a new comment");
+					setCommentSectionCommentCount(data.comments.length);
+					setTestQuestion(data.subject.test_question);
+
+					for (const comment of data.comments)
+						addCommentToDOM(comment.id, comment.parent_id, comment.name, comment.content, comment.creation_time, comment.edit_time_left);
+
+					break;
+
+				default:
+					throw null;
+			}
+		})
+		.catch((err) => {
+			setCommentFormStatus("Failed to load comments");
+		})
+		.finally(() => {
+			setParentFrameHeight();
+		});
+</script>
+
+<script>
+	function submitCommentForm(formEvent) {
+		formEvent.preventDefault();
+
+		let name = formEvent.target["name"].value.trim();
+		let content = formEvent.target["content"].value.trim();
+
+		// block if invalid input
+		if (setAndReturnIsNameInvalid(name) || setAndReturnIsContentInvalid(content))
+			return;
+
+		if (g_currentEditingId !== 0) {
+			let editKey = g_currentEditingEditKey;
+			let queryString = `http://localhost:8801/comment-edit?edit_key=${editKey}&name=${name}&content=${content}`;
+
+			setCommentFormStatus("Editting comment...");
+			setFormLocked(true);
+
+			fetch(queryString)
+				.then((response) => response.json())
+				.then((data) => {
+					switch (data.status) {
+						case "success":
+							setCommentNameAndContent(g_currentEditingId, name, content);
+							setFormNameAndContent("", "");
+							setFormStateInitial();
+							setCommentFormStatus("Successfully edited comment");
+							break;
+
+						case "limited":
+							setCommentFormStatus(`Slow down, wait ${data.penalty} seconds before trying again`);
+							break;
+
+						case "error":
+						default:
+							throw null;
+					}
+				})
+				.catch((err) => {
+					setCommentFormStatus("Failed to edit comment");
+				})
+				.finally(() => {
+					setFormLocked(false);
+					setParentFrameHeight();
+				});
+		}
+
+		else {
+			let test = formEvent.target["test-answer"].value;
+
+			// block if invalid input
+			if (setAndReturnIsTestInvalid(test))
+				return;
+
+			let subject = g_commentSubject;
+			let parent = g_currentReplyToId;
+			let queryString = `http://localhost:8801/comment-post?subject=${subject}&parent=${parent}&test=${test}&name=${name}&content=${content}`
+
+			setCommentFormStatus("Submitting comment...");
+			setFormLocked(true);
+
+			fetch(queryString)
+				.then((response) => response.json())
+				.then((data) => {
+					switch (data.status) {
+						case "success":
+							addOwnedComment(data.comment_id, data.edit_key);
+							addCommentToDOM(data.comment_id, parent, name, content, Date.now(), 900);
+
+							setFormStateInitial();
+							setFormNameAndContent("", "");
+							setCommentFormStatus("Successfully submitted comment, you have 15 minutes to edit");
+							setCommentSectionCommentCount(g_commentCount + 1);
+							break;
+
+						case "test failed":
+							setCommentFormStatus("Failed test");
+							setFieldError(g_formTest, g_formTestError, "Incorrect answer");
+
+							break;
+
+						case "limited":
+							setCommentFormStatus(`Slow down, wait ${data.penalty} seconds before trying again`);
+							break;
+
+						case "error":
+						default:
+							throw null;
+					}
+
+					console.log(data);
+				})
+				.catch((err) => {
+					setCommentFormStatus("Failed to submit comment");
+				})
+				.finally(() => {
+					setFormLocked(false);
+					setParentFrameHeight();
+				});
+		}
+	}
+</script>
+
+<script>
+	addValidationToFormInput(g_formName, g_formNameError, g_testName);
+	addValidationToFormInput(g_formTest, g_formTestError, g_testTest);
+	addValidationToFormInput(g_formContent, g_formContentError, g_testContent);
+
+	addTabkeyToFormInput(g_formContent);
+
+	loadOwnedComments();
+	setParentFrameHeight();
+
+	g_form.onsubmit = submitCommentForm;
+	g_formContent.onmousedown = () => window.onmousemove = setParentFrameHeight;
+	g_formContent.onmouseup = () => window.onmousemove = {};
+
+	window.addEventListener("resize", (e) => {
+		setParentFrameHeight();
+	});
+
+	window.addEventListener("message", (e) => {
+		console.log(e.data);
+		window.document.documentElement.setAttribute("color-theme", e.data.theme);
+	});
+
+	askParentFrameForTheme();
+</script>
+
+</html>

@@ -73,10 +73,12 @@ gAutoStylesCpp = {
 	'virtual': 'r',
 	'override': 'r',
 	'using': 'r',
+	'inline': 'r',
 
 	'operator': 'r',
 	'operator=': 's',
-	'operator': 's',
+	'operator|': 's',
+	'operator&': 's',
 
 	'size_t': 't',
 	'vector': 't',

@@ -47,12 +47,19 @@ def render_template(text, functions):
 			# Exit if the type is not in the functions
 
 			if type_string in functions:
-				argument_string = io.StringIO()
+				arguments = io.StringIO()
 				while c != ')':
-					argument_string.write(c)
+					arguments.write(c)
 					nextChar()
 
-				functions[type_string](output, argument_string.getvalue())
+				argument_string = arguments.getvalue()
+				has_arguments = len(argument_string) > 0
+				func = functions[type.getvalue()]
+
+				if has_arguments:
+					func(output, argument_string)
+				else:
+					func(output)
 
 			else:
 				output.write(acc.getvalue())
