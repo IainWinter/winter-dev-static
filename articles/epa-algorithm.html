@@ -3,14 +3,27 @@
 <head>
 	<title>EPA: Collision response algorithm for 2D/3D</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="/favicon.ico">
-	<link rel="stylesheet" href="/styles/global.css" />
-	<link rel="stylesheet" href="/styles/top.css" />
-	<link rel="stylesheet" href="/styles/article.css" />
-	<link rel="stylesheet" href="/styles/code.css" />
+	<link rel="icon" type="image/x-icon" href="../favicon.ico">
+	<link rel="stylesheet" href="../styles/global.css" />
+	<link rel="stylesheet" href="../styles/top.css" />
+	<link rel="stylesheet" href="../styles/article.css" />
+	<link rel="stylesheet" href="../styles/code.css" />
 </head>
 
-<script src="/scripts/no_flashbang.js"></script>
+
+		<script>
+			const g_exportRootPath = "../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+
+		<style>
+			:root {
+				--youtube-icon: url("../yt.svg");
+				--mark-icon: url("../mark.png");
+			}
+		</style>
+	
+<script src="../scripts/no_flashbang.js"></script>
 
 <body color-theme="dark">
 	<div class="main">
@@ -19,19 +32,19 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="/articles.html">Articles</a>
-					<a class="nav-link" href="/projects.html">Projects</a>
-					<a class="nav-link" href="/support.html">Support</a>
+					<a class="nav-link" href="../articles.html">Articles</a>
+					<a class="nav-link" href="../projects.html">Projects</a>
+					<a class="nav-link" href="../support.html">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="../light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
-		<script src="/scripts/toggle_dark.js"></script>
+		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
 			<h1 class="page-title">EPA: Collision response algorithm for 2D/3D</h1><p>Last time we looked at an algorithm for testing collisions between two convex polygons called GJK. It's a useful algorithm for sure, but it doesn't give us enough information to respond to the collisions it detects. In this article I'll describe an extension that allows us to find the correct normal and depth of the collisions. This extension provides the information that the solvers need to resolve a collision as I demonstrated in my original physics engine <a class="underline" target="_blank" href="/articles/physics-engine#collision-response">article</a>.</p><p>I call this algorithm an extension because its input is the internal state from GJK. If you recall, we were working with a simplex to try and surround the origin with a triangle in 2D or a tetrahedron in 3D. This algorithm takes the final simplex that contained the origin and finds the normal of collision, aka the shortest vector to nudge the shapes out of each other. The naive solution is to use the normal of the closest face to the origin, but remember, a simplex does not need to contain any of the original polygon's faces, so we could end up with an incorrect normal.</p><p>Let's jump into it, it's called the Expanding Polytope Algorithm because it expands the simplex by adding vertices to it until we find the shortest normal from a face that is on the original polygon. For jargon's sake, a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> becomes a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Polytope">polytope</a> after we begin adding more vertices to it. How do we do that? Well we already have the tools from GJK, all we need to do is iterate over the faces and find the closest one. Then we'll use the Support function to find if there is a point  further in the direction of that normal. If there is one, the face of the polytope must be inside the original polygon and can be expanded. If so, we'll add this supporting point and repeat.</p><p>In 2D this is easy, we can just add the point and the edges remain intact. In 3D we need to do a little repair job, which is where most of the annoyance comes from. Let's start with the 2D version first, because it shows the algorithm's main pieces, then we'll see how to repair the 3D polytope.</p>
@@ -39,7 +52,7 @@
 				2D in Javascript
 				<a class="article-subtitle-id-link" href="#2D">#</a>
 			</h2>
-		<p>I'm going to venture into a little <a class="underline" target="_blank" href="https://p5js.org/">p5.js</a> for the 2D version because I've made a small demo with it that you can check out in fullscreen <a class="underline" target="_blank" href="./articles/gjk-algorithm/app/demo.html">here</a>.</p><iframe class="article-embed" src="/articles/gjk-algorithm/app/demo.html"></iframe><p>We'll start with a function that takes in the simplex from GJK and the two shapes that we are testing.</p><p>The first step is to find the edge closest to the origin. We'll do this by comparing the dot products between their normals and the vectors from the origin. We only need the closest one, so we'll store it, along with its index and distance in variables, outside the loop to use later.</p>
+		<p>I'm going to venture into a little <a class="underline" target="_blank" href="https://p5js.org/">p5.js</a> for the 2D version because I've made a small demo with it that you can check out in fullscreen <a class="underline" target="_blank" href="../articles/gjk-algorithm/app/demo.html">here</a>.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/demo.html"></iframe><p>We'll start with a function that takes in the simplex from GJK and the two shapes that we are testing.</p><p>The first step is to find the edge closest to the origin. We'll do this by comparing the dot products between their normals and the vectors from the origin. We only need the closest one, so we'll store it, along with its index and distance in variables, outside the loop to use later.</p>
 			<div class="article-code draw-left-line">
 				<p class="article-code-file mark-section">EPA.js</p>
 				<pre class="article-code-text javascript">
@@ -73,7 +86,7 @@
 		</span><span class="code-s">}
 </span></pre>
 			</div>
-		<p>Finding the normal of a vector in 2D is done by swapping the X and Y components and flipping one of their signs. The handedness, either right or left, depends on which component gets flipped. Depending on the winding order, the handedness that results in an outward facing normal changes, so it's common to add a check to flip it if it's wrong.</p><div class="article-embed article-embed-no-height-limit "><svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272.67 119.38" style="fill: var(--text-color);">
+		<p>Finding the normal of a vector in 2D is done by swapping the X and Y components and flipping one of their signs. The handedness, either right or left, depends on which component gets flipped. Depending on the winding order, the handedness that results in an outward facing normal changes, so it's common to add a check to flip it if it's wrong.</p><div class="article-embed article-embed-no-height-limit"><svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272.67 119.38" style="fill: var(--text-color);">
 	<defs>
 		<style>
 			.cls-1 {
@@ -377,21 +390,21 @@
 			</div>
 		<p>That's it for this algorithm, this allows us to handle some interesting collisions in the physics engine.</p><p>Let's look at some demos!</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/0XQ2FSz3EK8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0XQ2FSz3EK8?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/0XQ2FSz3EK8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0XQ2FSz3EK8?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=epa-algorithm"></iframe>
-				<script src="/scripts/resize_comment_section.js"></script>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?subject=epa-algorithm"></iframe>
+				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
 		</div>
 	</div>
 
-	<script src="/scripts/swap_iframe.js"></script>
+	<script src="../scripts/swap_iframe.js"></script>
 </body>
 
 </html>

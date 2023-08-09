@@ -3,14 +3,27 @@
 <head>
 	<title>Another way of programming, taking it slow</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="/favicon.ico">
-	<link rel="stylesheet" href="/styles/global.css" />
-	<link rel="stylesheet" href="/styles/top.css" />
-	<link rel="stylesheet" href="/styles/article.css" />
-	<link rel="stylesheet" href="/styles/code.css" />
+	<link rel="icon" type="image/x-icon" href="../favicon.ico">
+	<link rel="stylesheet" href="../styles/global.css" />
+	<link rel="stylesheet" href="../styles/top.css" />
+	<link rel="stylesheet" href="../styles/article.css" />
+	<link rel="stylesheet" href="../styles/code.css" />
 </head>
 
-<script src="/scripts/no_flashbang.js"></script>
+
+		<script>
+			const g_exportRootPath = "../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+
+		<style>
+			:root {
+				--youtube-icon: url("../yt.svg");
+				--mark-icon: url("../mark.png");
+			}
+		</style>
+	
+<script src="../scripts/no_flashbang.js"></script>
 
 <body color-theme="dark">
 	<div class="main">
@@ -19,19 +32,19 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="/articles.html">Articles</a>
-					<a class="nav-link" href="/projects.html">Projects</a>
-					<a class="nav-link" href="/support.html">Support</a>
+					<a class="nav-link" href="../articles.html">Articles</a>
+					<a class="nav-link" href="../projects.html">Projects</a>
+					<a class="nav-link" href="../support.html">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="../light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
-		<script src="/scripts/toggle_dark.js"></script>
+		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
 			<h1 class="page-title">Another way of programming, taking it slow</h1><p>Whenever I sit down to write some code, I always get an itch to finish whatever problem is staring me in the face right at that moment. Over the last 2 years, I've realized that if you can afford to tackle a problem over a long period of time, you should absolutely go for that option.</p><p>There are major benefits that arise from this approach. The final code ends up more developed than what you would have been capable of writing at the beginning. You end up spending less time on the actual problem, because you only work on it when you have a good idea. And, after sitting with it for so long there's a good chance that even if not fully correct, it will still move you in the right direction. Taking it slow leads to an aha moment in the future along with the insight required to solve the problem.</p><p>I was inspired to write this article from an extreme example in my own code around making a prefab class for my entity system. When I first wrote the class, I had the intention to create it right then and there, but quickly realized I didn't have the knowledge to do so. It required doing type specific operations on generic pointers, with no types!</p>
@@ -73,14 +86,14 @@
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=another-way"></iframe>
-				<script src="/scripts/resize_comment_section.js"></script>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?subject=another-way"></iframe>
+				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
 		</div>
 	</div>
 
-	<script src="/scripts/swap_iframe.js"></script>
+	<script src="../scripts/swap_iframe.js"></script>
 </body>
 
 </html>

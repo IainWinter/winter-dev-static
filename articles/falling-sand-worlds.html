@@ -3,14 +3,27 @@
 <head>
 	<title>Making an infinite world with Falling Sand part 2</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="/favicon.ico">
-	<link rel="stylesheet" href="/styles/global.css" />
-	<link rel="stylesheet" href="/styles/top.css" />
-	<link rel="stylesheet" href="/styles/article.css" />
-	<link rel="stylesheet" href="/styles/code.css" />
+	<link rel="icon" type="image/x-icon" href="../favicon.ico">
+	<link rel="stylesheet" href="../styles/global.css" />
+	<link rel="stylesheet" href="../styles/top.css" />
+	<link rel="stylesheet" href="../styles/article.css" />
+	<link rel="stylesheet" href="../styles/code.css" />
 </head>
 
-<script src="/scripts/no_flashbang.js"></script>
+
+		<script>
+			const g_exportRootPath = "../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+
+		<style>
+			:root {
+				--youtube-icon: url("../yt.svg");
+				--mark-icon: url("../mark.png");
+			}
+		</style>
+	
+<script src="../scripts/no_flashbang.js"></script>
 
 <body color-theme="dark">
 	<div class="main">
@@ -19,26 +32,26 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="/articles.html">Articles</a>
-					<a class="nav-link" href="/projects.html">Projects</a>
-					<a class="nav-link" href="/support.html">Support</a>
+					<a class="nav-link" href="../articles.html">Articles</a>
+					<a class="nav-link" href="../projects.html">Projects</a>
+					<a class="nav-link" href="../support.html">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="../light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
-		<script src="/scripts/toggle_dark.js"></script>
+		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
 			<h1 class="page-title">Making an infinite world with Falling Sand part 2</h1>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/vNcsPE_YdmA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/vNcsPE_YdmA?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/vNcsPE_YdmA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/vNcsPE_YdmA?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
-		<p>Welcome back to the sand series, this post directly follows from what we did last time, so if you missed that, here's the <a class="underline" target="_blank" href="/articles/falling-sand-simulations">link</a>. In this post we'll first split the world into chunks, then look at some ways to speed it up.</p>
+		<p>Welcome back to the sand series, this post directly follows from what we did last time, so if you missed that, here's the <a class="underline" target="_blank" href="../articles/falling-sand">link</a>. In this post we'll first split the world into chunks, then look at some ways to speed it up.</p>
 			<h2 class="article-subtitle mark-section" id=Splitting>
 				Splitting the world into chunks
 				<a class="article-subtitle-id-link" href="#Splitting">#</a>
@@ -300,7 +313,7 @@
 			</div>
 		<p>And with that, we have chunked the world. I've made the texture draw a red pixel on the boundary of each chunk so we can see them. While I'm at it, I've made the camera center around the player so now we can fly around and see chunks all around us.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/29iiIUi9_kE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/29iiIUi9_kE?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/29iiIUi9_kE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/29iiIUi9_kE?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		
 			<h2 class="article-subtitle mark-section" id=Performance>
@@ -487,9 +500,9 @@
 			</div>
 		<p>If we look back at the chunk visualization, there are now only chunks where there are filled cells.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/X5Uwk63wLP4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/X5Uwk63wLP4?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/X5Uwk63wLP4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/X5Uwk63wLP4?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
-		<p>However, we still iterate over the static cells like rocks. This brings us to the second optimization. If a chunk only has a single filled cell, every cell is still iterated. We could though, select only a subsection to iterate. This technique is commonly referred to as a dirty rectangle and used in UI painting to save time by not redrawing static elements.</p><p>Whenever a cell gets set or moved, this rectangle needs to expand to contain it for the next update. We can't expand this rectangle during an update, so we need to double buffer it like we did for the initial <a class="underline" target="_blank" href="/articles/falling-sand-simulations#java-version">Processing version</a> of the cells array. To implement this, let's add a min/max x and y to the SandChunk along with two functions named UpdateRect and KeepAlive.</p>
+		<p>However, we still iterate over the static cells like rocks. This brings us to the second optimization. If a chunk only has a single filled cell, every cell is still iterated. We could though, select only a subsection to iterate. This technique is commonly referred to as a dirty rectangle and used in UI painting to save time by not redrawing static elements.</p><p>Whenever a cell gets set or moved, this rectangle needs to expand to contain it for the next update. We can't expand this rectangle during an update, so we need to double buffer it like we did for the initial <a class="underline" target="_blank" href="../articles/falling-sand#java-version">Processing version</a> of the cells array. To implement this, let's add a min/max x and y to the SandChunk along with two functions named UpdateRect and KeepAlive.</p>
 			<div class="article-code draw-left-line">
 				<p class="article-code-file mark-section">SandChunk.h</p>
 				<pre class="article-code-text cpp">
@@ -555,7 +568,7 @@
 			</div>
 		<p>I was under the impression that this was all that was required, but if we look at the boundary of a sleeping chunk, the cells don't wake up correctly. This happens because the rectangles are bounded by the chunks and they can't talk to their neighbors.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/8K1UN0H5X0w.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/8K1UN0H5X0w?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/8K1UN0H5X0w.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/8K1UN0H5X0w?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>We need a way to notify the chunks that an update has happened on their border. Let's add a KeepAlive function to the world,</p>
 			<div class="article-code draw-left-line">
@@ -597,7 +610,7 @@
 			</div>
 		<p>Now finally, let's look at what we got.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/MfZopu-o6b4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MfZopu-o6b4?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/MfZopu-o6b4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MfZopu-o6b4?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>That's a considerable speed up! These optimizations won't have much effect if the whole screen if full of moving cells though, we'll need to look to threading to alleviate that.</p><p>This made it sound easy, but in reality, it took me a while to stamp out all the bugs. If you're following along, before we get into threading, make sure this works 100% because it's going to be impossible to debug without disabling the threading part.</p>
 			<h2 class="article-subtitle mark-section" id=Threading>
@@ -617,7 +630,7 @@
 			</div>
 		<p>And we're done, let's see a demo!</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/OXop-HK18So.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/OXop-HK18So?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/OXop-HK18So.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/OXop-HK18So?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>Well if only it was that simple, right?</p><p>There are many issues with this code, if we look at the execution line by line, notice that the current thread only pushes tasks onto the queue, leaving the chunk updates to finish sometime in the future. Before that can happen, we start calling CommitCells. This causes race conditions all over the place, and an inevitable crash.</p><p>To fix this we need a way to wait for all the chunks to finish. C++ provides the std:: condition_variable class, which we can use to pause a thread until a condition is met, and the std::mutex class which allows us to mark critical sections for the OS to guard. Only one thread can run critical sections protected by a specific mutex at a time which allows us to safely edit shared variables in different threads.</p><p>To make these changes we'll need three variables: one condition variable, one mutex, and a count of chunks to update. After updating the chunk, we'll lock and decrement the count. We'll use a std::unique_lock and pass it the mutex. This locks the mutex until it pops off the stack, so we can use a scope and make it a one-liner. After we get the correct count, let's tie it all together with a condition variable. These act like messengers between threads; we can send notifications to a waiting thread by calling notify_one. Calling wait, blocks the thread until it receives a notification. Once it does, and the condition is met, it continues onwards with the mutex locked.</p>
 			<div class="article-code draw-left-line">
@@ -693,7 +706,7 @@
 			</div>
 		<p>Let's see what happens when we run it now.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/gOAnfB8ylGg.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/gOAnfB8ylGg?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/gOAnfB8ylGg.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/gOAnfB8ylGg?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>It seems stable, but eventually it crashes. Why could this be? Well we didn't account for the different threads calling back to the world and into other chunks. Those other chunks could be getting updated at the same time, creating more race conditions.</p><p>We need to consider who could be calling what functions in the SandChunk and SandWorld, and make sure to guard the ones that multiple threads could call at the same time.</p><p>Let's start with the functions in the SandChunk. Multiple threads could collide inside of SetCell, MoveCell, and KeepAlive, so we'll need three mutexes.</p>
 			<div class="article-code draw-left-line">
@@ -801,21 +814,21 @@
 			</div>
 		<p>That should be all for multithreading! Let's take a look at the performance.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/0k4DKajj_ZM.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0k4DKajj_ZM?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/0k4DKajj_ZM.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0k4DKajj_ZM?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>Look at that frame time! I think this is a good basis for a strong sand engine. Now I am going to try and build a game with it, so expect a few dev logs about that. I was hoping to make a game in a month but including engine dev time I'm already way past that, so we'll pause the clocks and I'll try and do some sort of weekly thing if I can, I think that'll be interesting. I tried making that space game I was taking about, and it was actually pretty cool, but there wasn't too much sand involved unfortunately, so I am going to try and repurpose the mechanics from it into something on the ground instead of in space.</p>
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=falling-sand-worlds"></iframe>
-				<script src="/scripts/resize_comment_section.js"></script>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?subject=falling-sand-worlds"></iframe>
+				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
 		</div>
 	</div>
 
-	<script src="/scripts/swap_iframe.js"></script>
+	<script src="../scripts/swap_iframe.js"></script>
 </body>
 
 </html>

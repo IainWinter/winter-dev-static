@@ -3,14 +3,27 @@
 <head>
 	<title>Making games with Falling Sand part 1</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="/favicon.ico">
-	<link rel="stylesheet" href="/styles/global.css" />
-	<link rel="stylesheet" href="/styles/top.css" />
-	<link rel="stylesheet" href="/styles/article.css" />
-	<link rel="stylesheet" href="/styles/code.css" />
+	<link rel="icon" type="image/x-icon" href="../favicon.ico">
+	<link rel="stylesheet" href="../styles/global.css" />
+	<link rel="stylesheet" href="../styles/top.css" />
+	<link rel="stylesheet" href="../styles/article.css" />
+	<link rel="stylesheet" href="../styles/code.css" />
 </head>
 
-<script src="/scripts/no_flashbang.js"></script>
+
+		<script>
+			const g_exportRootPath = "../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+
+		<style>
+			:root {
+				--youtube-icon: url("../yt.svg");
+				--mark-icon: url("../mark.png");
+			}
+		</style>
+	
+<script src="../scripts/no_flashbang.js"></script>
 
 <body color-theme="dark">
 	<div class="main">
@@ -19,24 +32,24 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="/articles.html">Articles</a>
-					<a class="nav-link" href="/projects.html">Projects</a>
-					<a class="nav-link" href="/support.html">Support</a>
+					<a class="nav-link" href="../articles.html">Articles</a>
+					<a class="nav-link" href="../projects.html">Projects</a>
+					<a class="nav-link" href="../support.html">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="../light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
-		<script src="/scripts/toggle_dark.js"></script>
+		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
 			<h1 class="page-title">Making games with Falling Sand part 1</h1>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/wZJCQQPaGZI.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/wZJCQQPaGZI?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/wZJCQQPaGZI.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/wZJCQQPaGZI?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>Simulating falling sand is no different from any other cellular automata. We have a big gird of cells and a set of rules that get applied to each cell every frame. You've probably heard of the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>. In that cellular automata, the rules are based on the number of neighbors surrounding a cell. For falling sand, we mostly look at if there is empty space below a cell for it to move into. This creates the look of particles cascading down.</p><p>One of the more interesting aspects of cellular automata is how complex behavior can emerge from such simple rules. That sounds like an interesting project could be created from only a few lines of code! Let's look at how you could go about making one of these in the Java version of Processing. You can download Processing <a class="underline" target="_blank" href="https://processing.org/">here</a> if you want to follow along.</p>
 			<h2 class="article-subtitle mark-section" id=Java>
@@ -87,7 +100,7 @@
     </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">_SAND</span><span class="code-s">) </span><span class="code-s">{
 </span></pre>
 			</div>
-		<p>We want sand to form dune like shapes, so let's encode a pyramid into its rules. We need to check directly below, down to the left, and down to the right.</p><img class="article-embed article-embed-half" src="/articles/falling-sand-simulations/sand.png"></img><p>By default, it should move down if possible, but if that cell is occupied, we'll check the other two directions.</p>
+		<p>We want sand to form dune like shapes, so let's encode a pyramid into its rules. We need to check directly below, down to the left, and down to the right.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/sand.png"></img><p>By default, it should move down if possible, but if that cell is occupied, we'll check the other two directions.</p>
 			<div class="article-code draw-left-line">
 				
 				<pre class="article-code-text processing">
@@ -138,7 +151,7 @@
 	</span><span class="code-s">}
 </span></pre>
 			</div>
-		<p>You can create other particle types by adding more rules in a similar way. For example, water and a stationary barrier type are the most straight forward and where I would start. Water is like sand, but we check directly to the left and right instead of diagonal, which gives the effect of liquid flow. Barriers have no movement properties but fill space so the other types can't move through them.</p><img class="article-embed article-embed-half" src="/articles/falling-sand-simulations/water.png"></img><h3>Common issues</h3><p>I saved the helper functions for last to highlight two common issues. The biggest gotcha with these types of simulations is that the order of iteration effects the behavior dramatically, and if we aren't careful, we could end up updating particles multiple times or even lose them entirely.</p>
+		<p>You can create other particle types by adding more rules in a similar way. For example, water and a stationary barrier type are the most straight forward and where I would start. Water is like sand, but we check directly to the left and right instead of diagonal, which gives the effect of liquid flow. Barriers have no movement properties but fill space so the other types can't move through them.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/water.png"></img><h3>Common issues</h3><p>I saved the helper functions for last to highlight two common issues. The biggest gotcha with these types of simulations is that the order of iteration effects the behavior dramatically, and if we aren't careful, we could end up updating particles multiple times or even lose them entirely.</p>
 			<div class="article-code draw-left-line">
 				<p class="article-code-file mark-section">sketch.pde</p>
 				<pre class="article-code-text processing">
@@ -158,9 +171,9 @@
 			</div>
 		<p>We have four options for how we order the iteration. No matter which we pick, there will always be slight issues. Let's see why.</p><p>If we iterate top to bottom, we end up updating the same particle multiple times. This results in a teleportation effect where a particle will only take a single frame to reach the floor. We could change the iteration to bottom to top, but then if we want particles that moves up, we run into the same issue. This highlights the fact that no matter which direction we pick, there will always be issues. Clearly, the solution must have more to it than just finding a magic ordering...</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/rh_AZGzRTcQ.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/rh_AZGzRTcQ?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/rh_AZGzRTcQ.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/rh_AZGzRTcQ?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
-		<p>The band aid solution in this Processing version comes from the subtle details of how the pixel array works. In the helper functions we read and write to the pixels array, but in draw we use the get function. Even though the docs don't say this, get must read from the displayed pixels array, which we don't update until we call updatePixels. This allows us to dodge the issue of updating particles multiple times because nothing updates until the end of the frame from get's perspective.</p><p>The second problem we can only mitigate. In isEmpty we don't use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we've somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.</p><img class="article-embed article-embed-half" src="/articles/falling-sand-simulations/conflict.png"></img><p>Now that we have an idea of how the basics work, and common pitfalls, let's jump over to C++ and see how these can be solved.</p>
+		<p>The band aid solution in this Processing version comes from the subtle details of how the pixel array works. In the helper functions we read and write to the pixels array, but in draw we use the get function. Even though the docs don't say this, get must read from the displayed pixels array, which we don't update until we call updatePixels. This allows us to dodge the issue of updating particles multiple times because nothing updates until the end of the frame from get's perspective.</p><p>The second problem we can only mitigate. In isEmpty we don't use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we've somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/conflict.png"></img><p>Now that we have an idea of how the basics work, and common pitfalls, let's jump over to C++ and see how these can be solved.</p>
 			<h2 class="article-subtitle mark-section" id=C++>
 				C++ Version
 				<a class="article-subtitle-id-link" href="#C++">#</a>
@@ -550,21 +563,21 @@
 			</div>
 		<p>And that about covers it, we're left with a decently quick simulation. On my computer this runs between 0.005 - .015 seconds per frame. Which is around 200 - 60 fps. Currently we can only use 1 thread, so if your computer has 4 cores we are only using 1/4th or more likely only 1/8th of its power :(</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/_r8p1FOH9j0.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_r8p1FOH9j0?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/_r8p1FOH9j0.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_r8p1FOH9j0?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>In the next post, I am going to cover how we could make the world bigger, and how multi-threading the simulation works. Then we'll make a game with it, so stay tuned if this seems interesting!</p>
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=falling-sand"></iframe>
-				<script src="/scripts/resize_comment_section.js"></script>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?subject=falling-sand"></iframe>
+				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
 		</div>
 	</div>
 
-	<script src="/scripts/swap_iframe.js"></script>
+	<script src="../scripts/swap_iframe.js"></script>
 </body>
 
 </html>

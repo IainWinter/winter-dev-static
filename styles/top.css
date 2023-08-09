@@ -90,7 +90,7 @@
 
 	.nav-section:after {
 		content: "";
-		background: url("/mark.png");
+		background: var(--mark-icon);
 		background-size: cover;
 		image-rendering: pixelated;
 		width: var(--img-pad);

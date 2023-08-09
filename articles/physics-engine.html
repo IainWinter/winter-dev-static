@@ -3,14 +3,27 @@
 <head>
 	<title>Designing a physics engine</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="/favicon.ico">
-	<link rel="stylesheet" href="/styles/global.css" />
-	<link rel="stylesheet" href="/styles/top.css" />
-	<link rel="stylesheet" href="/styles/article.css" />
-	<link rel="stylesheet" href="/styles/code.css" />
+	<link rel="icon" type="image/x-icon" href="../favicon.ico">
+	<link rel="stylesheet" href="../styles/global.css" />
+	<link rel="stylesheet" href="../styles/top.css" />
+	<link rel="stylesheet" href="../styles/article.css" />
+	<link rel="stylesheet" href="../styles/code.css" />
 </head>
 
-<script src="/scripts/no_flashbang.js"></script>
+
+		<script>
+			const g_exportRootPath = "../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+
+		<style>
+			:root {
+				--youtube-icon: url("../yt.svg");
+				--mark-icon: url("../mark.png");
+			}
+		</style>
+	
+<script src="../scripts/no_flashbang.js"></script>
 
 <body color-theme="dark">
 	<div class="main">
@@ -19,19 +32,19 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="/articles.html">Articles</a>
-					<a class="nav-link" href="/projects.html">Projects</a>
-					<a class="nav-link" href="/support.html">Support</a>
+					<a class="nav-link" href="../articles.html">Articles</a>
+					<a class="nav-link" href="../projects.html">Projects</a>
+					<a class="nav-link" href="../support.html">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="../light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
-		<script src="/scripts/toggle_dark.js"></script>
+		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
 			<h1 class="page-title">Designing a physics engine</h1><p>By coincidence, right when The Cherno announced his game engine series I was just starting to get going on my own engine. I couldn't wait to finally have a professional opinion on how to make one. With self-taught programming it's hard to not doubt yourself constantly, wondering if you are doing things right or just think you are.</p><p>Recently, he has been posting videos about huge aspects of his engine like physics and entity systems, which were what I really wanted to learn about by making myself, but he ended up using libraries instead of going through the internals! I am not against using libraries, but to use them for the fun stuff? I felt like it defeated the point of making a custom engine series.</p><p>There is an argument to be made about saving time, but this was the first C++ project that I was making and the goal from the start was to go through all the major pillars of an engine: input, graphics, physics, entities, and audio. I wanted to learn how those things worked along with C++ and code design in general.</p><p>I bet that some other people are interested in the details of how these systems work, and I want to learn how to explain code better, so I am going to try and make some videos going over the internals of these systems. They end up being much simpler than at first glance.</p>
@@ -102,11 +115,11 @@
 			</div>
 		<p>Note the use of pointers, this forces other systems to take care of the actual storing of objects, leaving the physics engine to worry about physics, not memory allocation.</p><p>With this you can simulate all sorts of stuff from objects flying through the sky to solar systems.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/crKrkn-RIOU.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/crKrkn-RIOU?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/crKrkn-RIOU.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/crKrkn-RIOU?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/sHZEs-oQTI4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/sHZEs-oQTI4?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/sHZEs-oQTI4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/sHZEs-oQTI4?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>You can do a lot with this, but it's the easy part to be honest, and that's not what you came for...</p>
 			<h2 class="article-subtitle mark-section" id=Collision>
@@ -288,7 +301,7 @@
 </span><span class="code-s">};
 </span></pre>
 			</div>
-		<p>When I originally wrote this article, I used a technique called double dispatch to call the collision algorithms, but as time when on I grew annoyed with this pattern. It led to a large number of duplicate functions which were just single lines calling other functions. It was very hard to follow and did a poor job solving the issue of locality, which is why I used it in the first place.</p><p>Instead, let’s steal some good ideas from Valve, specifically a table on page 33 of this <a class="underline" target="_blank" href="/articles/physics-engine/DirkGregorius_Contacts.pdf">pdf</a>. We can use functions pointers and enums to centralize the dispatching to the collision algorithms, and at the same time get a well defined table of which interactions our engine supports. </p><p>Each shape will have a different type of collider to hold its properties and a base to allow them to be stored. </p>
+		<p>When I originally wrote this article, I used a technique called double dispatch to call the collision algorithms, but as time when on I grew annoyed with this pattern. It led to a large number of duplicate functions which were just single lines calling other functions. It was very hard to follow and did a poor job solving the issue of locality, which is why I used it in the first place.</p><p>Instead, let’s steal some good ideas from Valve, specifically a table on page 33 of this <a class="underline" target="_blank" href="../articles/physics-engine/DirkGregorius_Contacts.pdf">pdf</a>. We can use functions pointers and enums to centralize the dispatching to the collision algorithms, and at the same time get a well defined table of which interactions our engine supports. </p><p>Each shape will have a different type of collider to hold its properties and a base to allow them to be stored. </p>
 			<div class="article-code draw-left-line">
 				<p class="article-code-file mark-section">Colliders.h</p>
 				<pre class="article-code-text cpp">
@@ -498,7 +511,7 @@
 			</div>
 		<p>In the last section the meat was in the design, this one leans much more towards what kinds of solvers you implement. I've made an impulse & position solver myself that seem to work for most situations. To keep this short, I won't cover the math here, but you can check out the source for the impulse solver <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/src/physics/Dynamics/ImpulseSolver.cpp">here</a>, and the position solver <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/src/physics/Dynamics/SmoothPositionSolver.cpp">here</a> if you are interested.</p><p>Let's see a demo!</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/Q_KAqCmEgyA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/Q_KAqCmEgyA?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/Q_KAqCmEgyA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/Q_KAqCmEgyA?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		
 			<h2 class="article-subtitle mark-section" id=More>
@@ -686,7 +699,7 @@
 			</div>
 		<p>Now we have a whole stack of options that the user can configure for many different scenarios with a simple yet powerful API.</p><p>There is one more option that I want to cover. The physics world has no need updating every frame. Say a game like CS:GO gets rendered at 300 fps. It's not checking the physics every frame; it might run at 50 Hz instead. If the game only used the positions from the physics engine, objects would have .02 seconds between each update, causing a jittery look. And that's an ideal rate, some games will only update at 20 Hz leaving .05 seconds between update!</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/_-cXkPp-aYw.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_-cXkPp-aYw?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/_-cXkPp-aYw.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_-cXkPp-aYw?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>To get around this, it is common to split the physics world from the rendered world. This is simply done by using a raw Transform instead of a pointer and having a system outside the physics interpolate the position every frame. Let's see how we might implement this.</p><p>First, we'll get rid of that pointer. We'll need to add a last transform as well which will gets set just before the update in MoveObjects.</p>
 			<div class="article-code draw-left-line">
@@ -742,21 +755,21 @@
 			</div>
 		<p>This system smoothy moves the objects between their positions in the physics engines every frame, removing all jittery artifacts from the movement.</p>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="/thumbnails/0xJ-oRCPRk8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0xJ-oRCPRk8?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/0xJ-oRCPRk8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0xJ-oRCPRk8?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
 		<p>And that's the final result. I hope you can use the principles from this article to get a better idea of how to lay out complex systems in nimble ways, or even make your own engine. There is a lot more to cover, but I'll leave it to a part 2 because this is getting long. Let me know what you thought, should I keep focusing on design, or dive deeper into the math behind the implementations?</p><p>Thanks for reading, I hope to catch you next time</p>
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="/external/comments.html?subject=physics-engine"></iframe>
-				<script src="/scripts/resize_comment_section.js"></script>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?subject=physics-engine"></iframe>
+				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
 		</div>
 	</div>
 
-	<script src="/scripts/swap_iframe.js"></script>
+	<script src="../scripts/swap_iframe.js"></script>
 </body>
 
 </html>
