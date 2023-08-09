@@ -1,6 +1,7 @@
 from winterdev_generator import render_winter_dev_single_article, render_winter_dev_card_list, render_winter_dev_support
 from os.path import isfile, join
 import os
+import sys
 
 def read_file(path):
 	text = ''
@@ -13,7 +14,7 @@ def write_file(path, text):
 	with open(path, 'w', encoding='utf-8') as f:
 		f.write(text)
 
-def do():
+def generate_site(outdir):
 	# load all article information into a list
 	
 	template_single_article = read_file('./content/single_article_template.html')
@@ -32,7 +33,7 @@ def do():
 	
 	# write all articles to static/articles
 	for (text, meta) in article_list:
-		write_file(f'./static/articles/{meta["slug"]}.html', text)
+		write_file(f'{outdir}/articles/{meta["slug"]}.html', text)
 	
 	articles_meta = [
 		meta for (_, meta) in article_list
@@ -55,8 +56,13 @@ def do():
 		}
 	]
 
-	write_file('./static/articles.html', render_winter_dev_card_list(template_card_list, "Articles", articles_meta))
-	write_file('./static/projects.html', render_winter_dev_card_list(template_card_list, "Projects", projects_meta))
-	write_file('./static/support.html', render_winter_dev_support(template_support))
+	# for now use articles as index
+	# may want to change to the latest article
 
-do()
+	write_file(f'{outdir}/index.html', render_winter_dev_card_list(template_card_list, "Articles", articles_meta))
+	write_file(f'{outdir}/projects.html', render_winter_dev_card_list(template_card_list, "Projects", projects_meta))
+	write_file(f'{outdir}/support.html', render_winter_dev_support(template_support))
+
+out_dir = sys.argv[1]
+
+generate_site(out_dir)
