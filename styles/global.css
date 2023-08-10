@@ -6,6 +6,7 @@
 	--ease-time: .3s;
 
 	--background: linear-gradient(110deg, rgba(2, 0, 36, .2) -100%, rgba(95, 95, 128, .3) 100%);
+	--background-html: black;
 	--text-color: whitesmoke;
 	--link-color: cyan;
 
@@ -20,6 +21,7 @@
 
 [color-theme="light"] {
 	--background: white;
+	--background-html: white;
 	--text-color: black;
 	--link-color: cyan;
 
@@ -28,7 +30,7 @@
 }
 
 html {
-	background-color: black;
+	background: var(--background-html);
 }
 
 body {
