@@ -76,7 +76,7 @@
 	--size_y: 48px;
 
 	content: "";
-	background-image: url("/yt.svg");
+	background-image: var(--youtube-icon);
 
 	left: 15px;
 	bottom: 20px;

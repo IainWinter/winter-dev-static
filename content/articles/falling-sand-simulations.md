@@ -58,7 +58,7 @@ After we load the pixels, we can iterate over them and check if they match a par
 
 We want sand to form dune like shapes, so let's encode a pyramid into its rules. We need to check directly below, down to the left, and down to the right.
 
-[img-half](/articles/falling-sand-simulations/sand.png)
+[img-half](~/articles/falling-sand-simulations/sand.png)
 
 By default, it should move down if possible, but if that cell is occupied, we'll check the other two directions.
 
@@ -109,7 +109,7 @@ To draw particles on the screen with the mouse, we can add these lines after loa
 
 You can create other particle types by adding more rules in a similar way. For example, water and a stationary barrier type are the most straight forward and where I would start. Water is like sand, but we check directly to the left and right instead of diagonal, which gives the effect of liquid flow. Barriers have no movement properties but fill space so the other types can't move through them.
 
-[img-half](/articles/falling-sand-simulations/water.png)
+[img-half](~/articles/falling-sand-simulations/water.png)
 
 [sub-title2](Common issues)
 
@@ -140,7 +140,7 @@ The band aid solution in this Processing version comes from the subtle details o
 
 The second problem we can only mitigate. In isEmpty we don't use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we've somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.
 
-[img-half](/articles/falling-sand-simulations/conflict.png)
+[img-half](~/articles/falling-sand-simulations/conflict.png)
 
 Now that we have an idea of how the basics work, and common pitfalls, let's jump over to C++ and see how these can be solved.
 

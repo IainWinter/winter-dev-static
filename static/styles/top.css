@@ -2,6 +2,7 @@
 	height: 100vh;
 	width: fit-content;
 	max-width: 360px;
+	width: 215px;
 	flex-direction: column;
 	display: flex;
 	user-select: none;
@@ -90,7 +91,7 @@
 
 	.nav-section:after {
 		content: "";
-		background: url("/mark.png");
+		background: var(--mark-icon);
 		background-size: cover;
 		image-rendering: pixelated;
 		width: var(--img-pad);

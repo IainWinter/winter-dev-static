@@ -1,20 +1,10 @@
 from winterdev_generator import render_winter_dev_single_article, render_winter_dev_card_list, render_winter_dev_support
+from file import read_file, write_file, set_export_root_dir, set_export_suffix_page_path, copy_changed_files
 from os.path import isfile, join
 import os
 import sys
 
-def read_file(path):
-	text = ''
-	with open(path, 'r', encoding='utf-8') as f:
-		text = f.read()
-	return text
-
-def write_file(path, text):
-	print(f'Wrote {path}')
-	with open(path, 'w', encoding='utf-8') as f:
-		f.write(text)
-
-def generate_site(outdir):
+def generate_site(outdir, for_local):
 	# load all article information into a list
 	
 	template_single_article = read_file('./content/single_article_template.html')
@@ -23,6 +13,11 @@ def generate_site(outdir):
 
 	article_folder = './content/articles/'
 	article_list = []
+
+	set_export_root_dir("../")
+
+	if for_local:
+		set_export_suffix_page_path(".html")
 
 	for file in os.listdir(article_folder):
 		file_path = join(article_folder, file)
@@ -56,13 +51,21 @@ def generate_site(outdir):
 		}
 	]
 
-	# for now use articles as index
-	# may want to change to the latest article
+	set_export_root_dir("./")
 
-	write_file(f'{outdir}/index.html', render_winter_dev_card_list(template_card_list, "Articles", articles_meta))
-	write_file(f'{outdir}/projects.html', render_winter_dev_card_list(template_card_list, "Projects", projects_meta))
-	write_file(f'{outdir}/support.html', render_winter_dev_support(template_support))
+	articles_render = render_winter_dev_card_list(template_card_list, "Articles", articles_meta)
+	projects_render = render_winter_dev_card_list(template_card_list, "Projects", projects_meta)
+	support_render = render_winter_dev_support(template_support)
+
+	# just make two files ez
+	write_file(f'{outdir}/index.html', articles_render)
+	write_file(f'{outdir}/articles.html', articles_render)
+	write_file(f'{outdir}/projects.html', projects_render)
+	write_file(f'{outdir}/support.html', support_render)
+
+	copy_changed_files("./static", out_dir)
 
 out_dir = sys.argv[1]
+for_local = sys.argv[2] == "local"
 
-generate_site(out_dir)
+generate_site(out_dir, for_local)

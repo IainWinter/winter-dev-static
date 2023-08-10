@@ -117,7 +117,7 @@ struct `t`Transform { // Describes an objects location
 
 When I originally wrote this article, I used a technique called double dispatch to call the collision algorithms, but as time when on I grew annoyed with this pattern. It led to a large number of duplicate functions which were just single lines calling other functions. It was very hard to follow and did a poor job solving the issue of locality, which is why I used it in the first place.
 
-Instead, let’s steal some good ideas from Valve, specifically a table on page 33 of this [link](pdf, /articles/physics-engine/DirkGregorius_Contacts.pdf). We can use functions pointers and enums to centralize the dispatching to the collision algorithms, and at the same time get a well defined table of which interactions our engine supports. 
+Instead, let’s steal some good ideas from Valve, specifically a table on page 33 of this [link](pdf, ~/articles/physics-engine/DirkGregorius_Contacts.pdf). We can use functions pointers and enums to centralize the dispatching to the collision algorithms, and at the same time get a well defined table of which interactions our engine supports. 
 
 Each shape will have a different type of collider to hold its properties and a base to allow them to be stored. 
 

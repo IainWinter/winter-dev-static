@@ -10,7 +10,7 @@ published: true
 
 [iframe-youtube-video](https://www.youtube.com/embed/vNcsPE_YdmA?rel=0)
 
-Welcome back to the sand series, this post directly follows from what we did last time, so if you missed that, here's the [link](link, /articles/falling-sand-simulations). In this post we'll first split the world into chunks, then look at some ways to speed it up.
+Welcome back to the sand series, this post directly follows from what we did last time, so if you missed that, here's the [link](link, ~/articles/falling-sand). In this post we'll first split the world into chunks, then look at some ways to speed it up.
 
 [sub-title](Splitting the world into chunks)
 
@@ -457,7 +457,7 @@ If we look back at the chunk visualization, there are now only chunks where ther
 
 However, we still iterate over the static cells like rocks. This brings us to the second optimization. If a chunk only has a single filled cell, every cell is still iterated. We could though, select only a subsection to iterate. This technique is commonly referred to as a dirty rectangle and used in UI painting to save time by not redrawing static elements.
 
-Whenever a cell gets set or moved, this rectangle needs to expand to contain it for the next update. We can't expand this rectangle during an update, so we need to double buffer it like we did for the initial [link](Processing version, /articles/falling-sand-simulations#java-version) of the cells array. To implement this, let's add a min/max x and y to the SandChunk along with two functions named UpdateRect and KeepAlive.
+Whenever a cell gets set or moved, this rectangle needs to expand to contain it for the next update. We can't expand this rectangle during an update, so we need to double buffer it like we did for the initial [link](Processing version, ~/articles/falling-sand#java-version) of the cells array. To implement this, let's add a min/max x and y to the SandChunk along with two functions named UpdateRect and KeepAlive.
 
 [code](SandChunk.h, cpp,
 public:

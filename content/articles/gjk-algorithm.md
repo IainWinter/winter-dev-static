@@ -18,19 +18,19 @@ The GJK algorithm is very useful and widely used, but no good visualization or c
 
 Testing for a collision between spheres is easy because there are only two points in the system. This leaves us with a single vector that we can compare against the sum of their radii to determine if there is a collision.
 
-[iframe](/articles/gjk-algorithm/app/circles.html)
+[iframe](~/articles/gjk-algorithm/app/circles.html)
 
 With polygons we cannot make such simplifications. They are made from multiple vertices, removing any apparent way of finding their distance and clear radius property to compare against. We need a smarter way of testing for a collision.
 
 Like we subtracted the points in the sphere system, let's see what happens if we subtract the vertices of the polygons.
 
-[iframe](/articles/gjk-algorithm/app/sub_poly.html)
+[iframe](~/articles/gjk-algorithm/app/sub_poly.html)
 
 Subtracting two polygons with the same number of vertices is straightforward, but if we want to support various polygons, we need to subtract each vertex from every vertex on the other polygon. Because there are multiple vertices, we are not left with a single vector, but many that form another polygon. This results in a cloud of [equation-inline](A*B) number vertices that we need to process further to select the outer convex hull from.
 
 This outer hull is known as the [link](Minkowski difference, https://en.wikipedia.org/wiki/Minkowski_addition). It represents the distance between every point of the two polygons. We are going to use it to turn two polygons into one that we can analyze to detect a collision. The key is that if the origin is inside the difference, there must have been two points that subtracted to 0; meaning there is overlap somewhere.
 
-[iframe](/articles/gjk-algorithm/app/mink_diff.html)
+[iframe](~/articles/gjk-algorithm/app/mink_diff.html)
 
 [sub-title](Abstracting shapes into supporting points)
 
@@ -53,11 +53,11 @@ Now all we need is [equation-inline](A+B) steps; turning our quadratic time func
 
 We need to reverse the direction for [equation-inline](A) when we distribute max because we want to retain the max value. We want the lest extreme vertex from [equation-inline](B) to subtract from the most extreme vertex from [equation-inline](A).
 
-[img](/articles/gjk-algorithm/supports.jpg)
+[img](~/articles/gjk-algorithm/supports.jpg)
 
 These vertices are referred to as [link](supporting points, https://en.wikipedia.org/wiki/Support_function) and give a view into the Minkowski difference without ever calculating more than we need.
 
-Let's look at the implementation -- I'm going to continue to use the Collider structs from the [link](physics engine, /articles/physics-engine) article for consistency, but will only include the new pieces from this article.
+Let's look at the implementation -- I'm going to continue to use the Collider structs from the [link](physics engine, ~/articles/physics-engine) article for consistency, but will only include the new pieces from this article.
 
 We'll start by adding a function that finds the support point in a given direction. Let's call it FindFurthestPoint. If we have other special types of colliders like spheres, capsules, or planes, we can override this function allowing them to be used with GJK as well.
 
@@ -114,7 +114,7 @@ A simplex is defined as a shape that has [equation-inline](N+1) number of vertic
 
 We get the vertices for the simplex from the Support function, so we need to find the direction to the origin from the closest feature. Searching towards the origin allows the algorithm to converge quickly. Let's look an example. We'll start with an arbitrary vertex then add or remove vertices every iteration until we surround the origin or find it's impossible.
 
-[iframe](/articles/gjk-algorithm/app/slide-show.html)
+[iframe](~/articles/gjk-algorithm/app/slide-show.html)
 
 We can see that there are two cases that we need to deal with: a line and triangle. We need one more case in the form of a tetrahedron to select a volume if we want 3D collision detection.
 
@@ -249,7 +249,7 @@ bool `f`Line(`t`Simplex& `a`points, vec3& `a`direction)
 }
 )
 
-[img](/articles/gjk-algorithm/line.jpg)
+[img](~/articles/gjk-algorithm/line.jpg)
 
 In this case, AO is in the same direction as AB, so we know it's in the green region. We'll set the search direction pointing towards the origin and move on. In 2D, you would not need to use cross products, but in 3D the origin could be anywhere in a cylinder around the line, so we need them to get the correct direction.
 
@@ -302,7 +302,7 @@ bool `f`Triangle(`t`Simplex& `a`points, vec3& `a`direction)
 }
 )
 
-[img](/articles/gjk-algorithm/triangle.jpg)
+[img](~/articles/gjk-algorithm/triangle.jpg)
 
 The tetrahedron case is the most complex, but almost entirely made up of triangle cases. We don't need to test for the origin below the tetrahedron for the same reason as before. We only need to determine which face, if any, the origin is in the direction of. If there is one, we'll go back to the triangle case with that face as the simplex, but if not, we know it must be inside the tetrahedron and we'll return true.
 
@@ -339,10 +339,10 @@ bool `f`Tetrahedron(`t`Simplex& `a`points, vec3& `a`direction)
 }
 )
 
-[img](/articles/gjk-algorithm/tetrahedron.jpg)
+[img](~/articles/gjk-algorithm/tetrahedron.jpg)
 
 With that final case, we have completed the GJK algorithm. As you can see it is not that complex looking at it from a geometric point of view. This algorithm only gives you a yes/no answer about a collision, so you cannot respond to it. In the next article I will cover an algorithm that uses the simplex and similar principles to find the collision normal then maybe get into rotational physics. Thanks for reading!
 
-Here is a demo that will let you play around with the algorithm and let you inspect each iteration, here's the [link](full version, /articles/gjk-algorithm/app/demo.html) if you want a better look...
+Here is a demo that will let you play around with the algorithm and let you inspect each iteration, here's the [link](full version, ~/articles/gjk-algorithm/app/demo.html) if you want a better look...
 
-[iframe](/articles/gjk-algorithm/app/demo.html)
+[iframe](~/articles/gjk-algorithm/app/demo.html)

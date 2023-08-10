@@ -207,8 +207,6 @@
 </script>
 
 <script>
-	// There needs to be a little bit of global state to track which comment is being replyed to
-
 	let g_form = document.getElementById("comment-form");
 	let g_commentSection = document.getElementById("comment-section");
 
@@ -232,8 +230,6 @@
 	let g_commentFormTestQuestion = document.getElementById("comment-form-test-question");
 
 	let g_commentCount = 0;
-
-	// parse the subject from the window url parmeter 'subject'
 	let g_commentSubject = new URLSearchParams(location.search).get('subject');
 
 	const g_testName = [

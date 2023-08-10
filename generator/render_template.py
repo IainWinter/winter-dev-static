@@ -1,4 +1,5 @@
 import io
+from file import ref
 
 def render_template(text, functions):
 	output = io.StringIO()
@@ -65,6 +66,14 @@ def render_template(text, functions):
 				output.write(acc.getvalue())
 
 			acc = io.StringIO()
+
+		elif c == '~':
+			nextChar()
+			if c == '/':
+				output.write(ref("~/"))
+			else:
+				output.write('~')
+				output.write(c)
 
 		else:
 			output.write(c)
