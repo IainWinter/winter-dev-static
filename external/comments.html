@@ -258,13 +258,13 @@
 	function urlPostComment(name, content, test) {
 		uri_encode_name = encodeURIComponent(name)
 		uri_encode_content = encodeURIComponent(content)
-		return `${g_commentHost}/comment-post/${g_commentSubject}/${test}/${g_currentReplyToId}/${uri_encode_name}/${uri_encode_content}`
+		return `${g_commentHost}/comment-post/${g_commentSubject}/${g_currentReplyToId}?test=${test}&name=${uri_encode_name}&content=${uri_encode_content}`
 	}
 
 	function urlEditComment(name, content) {
 		uri_encode_name = encodeURIComponent(name)
 		uri_encode_content = encodeURIComponent(content)
-		return `${g_commentHost}/comment-edit/${g_currentEditingEditKey}/${uri_encode_name}/${uri_encode_content}`
+		return `${g_commentHost}/comment-edit/${g_currentEditingEditKey}?name=${uri_encode_name}&content=${uri_encode_content}`
 	}
 
 	const g_testName = [
