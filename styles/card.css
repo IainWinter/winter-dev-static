@@ -4,13 +4,14 @@
 }
 
 .article-card-thumb {
-	--size: 240px;
-
-	width: var(--size);
-	height: calc(var(--size) * 9 / 16);
-	margin: 0;
 	display: block;
+	
+	width: 240px;
+	aspect-ratio: auto 16 / 9;
+	
+	margin: 0;
 	margin-right: 15px;
+
     border-radius: 5px;
 }
 
