@@ -162,7 +162,7 @@ def render_winter_dev_single_article(template_text: str, article_text: str) -> s
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="{ref(f'~/external/comments.html?host=http://0.0.0.0:5000&subject={meta["slug"]}')}"></iframe>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="{ref(f'~/external/comments.html?host=https://comments.winter.dev&subject={meta["slug"]}')}"></iframe>
 				<script src="{ref("~/scripts/resize_comment_section.js")}"></script>
 			</div>
 	   ''')
