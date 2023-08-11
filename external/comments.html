@@ -411,6 +411,10 @@
 </script>
 
 <script>
+	function applyNewlines(text) {
+		return text.replaceAll('\n', "<br>");
+	}
+	
 	function addCommentToDOM(id, parentId, name, content, creationTime, edit_time_left) {
 		var dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
 		let creationTimeDateString = new Date(creationTime).toLocaleDateString("en-US", dateOptions);
@@ -432,7 +436,7 @@
 				<span class="comment-reply"> posted on ${creationTimeDateString} - ${editOrReplyLink}</span>
 			</p> 
 			<p class="comment-contents">
-				${content}
+				${applyNewlines(content)}
 			</p>
 		`;
 
@@ -459,7 +463,7 @@
 		nameSpan.innerHTML = name;
 
 		let contentP = commentDiv.children[1];
-		contentP.innerHTML = content;
+		contentP.innerHTML = applyNewlines(content);
 	}
 </script>
 
