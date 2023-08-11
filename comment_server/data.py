@@ -46,8 +46,11 @@ def init_tables():
        );
     ''')
 
+	db_commit()
+
 def create_subject(subject_name: str, test_question: str, test_answer: str):
 	query("INSERT INTO subjects (name, test_question, test_answer) VALUES (?, ?, ?)", (subject_name, test_question, test_answer))
+	db_commit()
 
 def subject_or_answer_is_invalid(subject_id: int, test_answer: str):
 	count = query_get_count("SELECT COUNT(*) FROM subjects WHERE id = ? AND test_answer = ?", (subject_id, test_answer))
@@ -59,13 +62,16 @@ def comment_or_timelimit_invalid(edit_key: str):
 
 def comment_insert(parent_id: int, subject_id: int, edit_key: str, creation_ip: str, name: str, content: str):
 	id = query_get("INSERT INTO comments (parent_id, subject_id, edit_key, creation_ip, name, content) VALUES (?, ?, ?, ?, ?, ?) RETURNING id", (parent_id, subject_id, edit_key, creation_ip, name, content))
+	db_commit()
 	return id["id"]
 
 def comment_update(edit_key: str, new_name: str, new_content: str):
 	query("UPDATE comments SET name = ?, content = ? WHERE edit_key = ?", (new_name, new_content, edit_key))
+	db_commit()
 
 def comment_delete(edit_key: str):
 	query("UPDATE comments SET is_deleted = TRUE WHERE edit_key = ?", (edit_key, ))
+	db_commit()
 
 def comment_get_all_not_deletd_for_subject(subject_id: int):
 	return query("SELECT id, parent_id, creation_time, name, content, strftime('%s', creation_time) - strftime('%s', datetime('now', '-15 minutes')) AS edit_time_left FROM comments WHERE subject_id = ? AND is_deleted = FALSE", (subject_id, ))
@@ -76,9 +82,11 @@ def subject_get_info(subject_id: int):
 def ip_reduce_recent_count(ip: str):
 	# Insert ip if it doesn't exist
 	query("INSERT OR IGNORE INTO ip_limiters (ip) VALUES (?)", (ip, ))
+	db_commit()
 
 	# Add 1 for each query and subtract 1 for every 30 second interval since query, limit the count to 0
 	query("UPDATE ip_limiters SET recent_count = 1 + MAX(0, recent_count - (strftime('%s', 'now') - strftime('%s', last_time)) / ?), last_time = CURRENT_TIMESTAMP WHERE ip = ?", (SECONDS_PENALTY_PER_CONNECTION, ip))
+	db_commit()
 
 def ip_is_rejected(ip: str):
 	# Just run this here, assumes this is done once per connection

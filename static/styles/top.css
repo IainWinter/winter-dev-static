@@ -16,11 +16,17 @@
 }
 
 .nav-section {
-	margin: auto 0 var(--pad) 0;
 	font-size: 42px;
 	text-align: center;
-
+	
 	pointer-events: none;
+
+	/* margin: auto 0 var(--pad) 0; */
+
+	position: fixed;
+	bottom: var(--pad);
+	left: var(--pad);
+	min-width: 215px; /* this is how big the text gets */
 }
 
 .nav-link {
@@ -87,6 +93,11 @@
 
 		display: flex;
 		justify-content: space-between;
+
+		/* reset fixed */
+		min-width: unset;
+		left: unset;
+		bottom: unset;
 	}
 
 	.nav-section:after {
@@ -141,5 +152,12 @@
 @media (max-width: 300px) {
 	.nav-links {
 		flex-direction: column;
+	}
+}
+
+@media (max-height: 520px) {
+	.nav-section {
+		margin: auto 0 var(--pad) 0;
+		position: unset;
 	}
 }

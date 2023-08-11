@@ -66,6 +66,6 @@ def generate_site(outdir, for_local):
 	copy_changed_files("./static", out_dir)
 
 out_dir = sys.argv[1]
-for_local = sys.argv[2] == "local"
+for_local = sys.argv[2] == "local" if len(sys.argv) > 2 else False
 
 generate_site(out_dir, for_local)
