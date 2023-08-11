@@ -261,10 +261,10 @@
 		return `${g_commentHost}/comment-post/${g_commentSubject}/${test}/${g_currentReplyToId}/${uri_encode_name}/${uri_encode_content}`
 	}
 
-	function urlEditComment(editKey, name, content) {
+	function urlEditComment(name, content) {
 		uri_encode_name = encodeURIComponent(name)
 		uri_encode_content = encodeURIComponent(content)
-		return `${g_commentHost}/comment-edit/${editKey}/${uri_encode_name}/${uri_encode_content}`
+		return `${g_commentHost}/comment-edit/${g_currentEditingEditKey}/${uri_encode_name}/${uri_encode_content}`
 	}
 
 	const g_testName = [
@@ -518,7 +518,7 @@
 			setCommentFormStatus("Editting comment...");
 			setFormLocked(true);
 
-			fetch(urlEditComment(editKey, name, content))
+			fetch(urlEditComment(name, content))
 				.then((response) => response.json())
 				.then((data) => {
 					switch (data.status) {
