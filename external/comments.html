@@ -475,30 +475,32 @@
 		setParentFrameHeight();
 	}
 
-	fetch(urlGetComments())
-		.then((response) => response.json())
-		.then((data) => {
-			switch (data.status) {
-				case "success":
-					setCommentFormStatus("Write a new comment");
-					setCommentSectionCommentCount(data.comments.length);
-					setTestQuestion(data.subject.test_question);
+	else {
+		fetch(urlGetComments())
+			.then((response) => response.json())
+			.then((data) => {
+				switch (data.status) {
+					case "success":
+						setCommentFormStatus("Write a new comment");
+						setCommentSectionCommentCount(data.comments.length);
+						setTestQuestion(data.subject.test_question);
 
-					for (const comment of data.comments)
-						addCommentToDOM(comment.id, comment.parent_id, comment.name, comment.content, comment.creation_time, comment.edit_time_left);
+						for (const comment of data.comments)
+							addCommentToDOM(comment.id, comment.parent_id, comment.name, comment.content, comment.creation_time, comment.edit_time_left);
 
-					break;
+						break;
 
-				default:
-					throw null;
-			}
-		})
-		.catch((err) => {
-			setCommentFormStatus("Failed to load comments");
-		})
-		.finally(() => {
-			setParentFrameHeight();
-		});
+					default:
+						throw null;
+				}
+			})
+			.catch((err) => {
+				setCommentFormStatus("Failed to load comments");
+			})
+			.finally(() => {
+				setParentFrameHeight();
+			});
+	}
 </script>
 
 <script>
