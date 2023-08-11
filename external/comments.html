@@ -1,7 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" color-theme="light">
+
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
 
 <body>
+	<span id="comment-form-status"></span>
+
 	<form id="comment-form" class="comment-form">
 		<fieldset id="comment-form-set">
 			<field>
@@ -23,7 +29,7 @@
 			</field>
 
 			<field-bottom>
-				<span id="comment-form-status"></span>
+				<button type="button" id="comment-form-button-cancel" onclick="setFormStateInitial();" hidden>Cancel</button>
 				<button type="submit">Submit</button>
 			</field-bottom>
 		</fieldset>
@@ -70,13 +76,13 @@
 		}
 
 		field {
-			margin-bottom: 20px;
+			margin-top: 20px;
 			display: grid;
 		}
 
 		field-bottom {
 			display: flex;
-			justify-content: space-between;
+			justify-content: flex-end;
 		}
 
 		input,
@@ -113,7 +119,10 @@
 		button {
 			cursor: pointer;
 			float: right;
-   			padding: 5px 20px;
+			padding: 5px 0;
+    		margin-left: 15px;
+			margin-top: 15px;
+			width: 120px;
 		}
 
 		button:hover {
@@ -125,13 +134,17 @@
 			font-size: 16px;
 		}
 
+		.comment-form-buttons {
+			width: 320px;
+		}
+
 		.error-text {
 			color: var(--error-color);
 			margin: 0;
 			margin-top: 2px;
 			margin-bottom: -16px;
 			font-size: 16px;
-			height: 16px;
+			min-height: 19px;
 		}
 
 		.comment {
@@ -139,7 +152,7 @@
 			padding-left: 10px;
 			padding-bottom: 1px;
 			margin-left: -10px;
-    		margin-bottom: 5px;
+			margin-bottom: 5px;
 		}
 
 		.comment .comment {
@@ -165,24 +178,21 @@
 </body>
 
 <script>
-	function setCookie(cname, cvalue, exminutes) 
-	{
+	function setCookie(cname, cvalue, exminutes) {
 		const d = new Date();
-		d.setTime(d.getTime() + (exminutes*60*1000));
-		let expires = "expires="+ d.toUTCString();
+		d.setTime(d.getTime() + (exminutes * 60 * 1000));
+		let expires = "expires=" + d.toUTCString();
 		document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
 	}
 
-	function getCookie(cname)
-	{
+	function getCookie(cname) {
 		let name = cname + "=";
 		let decodedCookie = decodeURIComponent(document.cookie);
 		let ca = decodedCookie.split(';');
-		
-		for(let i = 0; i <ca.length; i++) 
-		{
+
+		for (let i = 0; i < ca.length; i++) {
 			let c = ca[i];
-			
+
 			while (c.charAt(0) == ' ')
 				c = c.substring(1);
 
@@ -201,9 +211,14 @@
 		window.parent.postMessage({ reason: "setHeight", height: document.body.scrollHeight }, '*');
 	}
 
+	function setParentScrollToComments() {
+		window.parent.postMessage({ reason: "setScrollToComments" }, '*');
+	}
+
 	function askParentFrameForTheme() {
 		window.parent.postMessage({ reason: "askTheme" }, '*');
 	}
+
 </script>
 
 <script>
@@ -225,12 +240,32 @@
 
 	let g_commentFormStatus = document.getElementById("comment-form-status");
 	let g_commentSectionStatus = document.getElementById("comment-section-status");
-
+	let g_commentFormCancelButton = document.getElementById("comment-form-button-cancel");
+		
 	let g_commentFormTest = document.getElementById("comment-form-test");
 	let g_commentFormTestQuestion = document.getElementById("comment-form-test-question");
 
 	let g_commentCount = 0;
-	let g_commentSubject = new URLSearchParams(location.search).get('subject');
+
+	let urlParams = new URLSearchParams(location.search);
+	let g_commentSubject = urlParams.get('subject');
+	let g_commentHost = urlParams.get('host');
+
+	function urlGetComments() {
+		return `${g_commentHost}/comment-get/${g_commentSubject}`
+	}
+
+	function urlPostComment(name, content, test) {
+		uri_encode_name = encodeURIComponent(name)
+		uri_encode_content = encodeURIComponent(content)
+		return `${g_commentHost}/comment-post/${g_commentSubject}/${test}/${g_currentReplyToId}/${uri_encode_name}/${uri_encode_content}`
+	}
+
+	function urlEditComment(editKey, name, content) {
+		uri_encode_name = encodeURIComponent(name)
+		uri_encode_content = encodeURIComponent(content)
+		return `${g_commentHost}/comment-edit/${editKey}/${uri_encode_name}/${uri_encode_content}`
+	}
 
 	const g_testName = [
 		[(str) => str.length < 2 || str.length > 36, "Name must be between 2 and 36 characters long"],
@@ -308,29 +343,36 @@
 		g_currentReplyToId = 0;
 		g_commentFormStatus.innerHTML = "Write a new comment";
 		g_commentFormTest.style.display = "grid";
+		g_commentFormCancelButton.hidden = true;
 	}
 
 	function setFormStateReplying(commentId, commentName) {
 		g_currentEditingId = 0;
 		g_currentEditingEditKey = "";
 		g_currentReplyToId = commentId;
-		g_commentFormStatus.innerHTML = `Reply to ${commentName} - <a onclick="setFormStateInitial();">Cancel</a>`;
+		g_commentFormStatus.innerHTML = `Reply to ${commentName}`;
 		g_commentFormTest.style.display = "grid";
+		g_commentFormCancelButton.hidden = false;
+
+		setParentScrollToComments();
 	}
 
 	function setFormStateEditing(commentId, commentName, editKey) {
 		g_currentEditingId = commentId;
 		g_currentEditingEditKey = editKey;
 		g_currentReplyToId = 0;
-		g_commentFormStatus.innerHTML = `Edit ${commentName} - <a onclick="setFormStateInitial();">Cancel</a>`;
+		g_commentFormStatus.innerHTML = `Edit ${commentName}`;
 		g_commentFormTest.style.display = "none";
+		g_commentFormCancelButton.hidden = false;
 
 		// set form data from selected comment
 		let commentDiv = document.getElementById(getCommentIdString(commentId));
 		let name = commentDiv.children[0].children[0].innerText;
 		let content = commentDiv.children[1].innerText;
-
+		
 		setFormNameAndContent(name, content);
+
+		setParentScrollToComments();
 	}
 
 	function setCommentFormStatus(status) {
@@ -425,8 +467,15 @@
 	// Load the initial list of comments
 
 	setCommentFormStatus("Loading comments...");
-	
-	fetch(`http://localhost:8801/comment-get?subject=${g_commentSubject}`)
+
+	// error immediately if subject is invalid
+
+	if (g_commentSubject === "") {
+		setCommentFormStatus("Invalid subject");
+		setParentFrameHeight();
+	}
+
+	fetch(urlGetComments())
 		.then((response) => response.json())
 		.then((data) => {
 			switch (data.status) {
@@ -464,13 +513,10 @@
 			return;
 
 		if (g_currentEditingId !== 0) {
-			let editKey = g_currentEditingEditKey;
-			let queryString = `http://localhost:8801/comment-edit?edit_key=${editKey}&name=${name}&content=${content}`;
-
 			setCommentFormStatus("Editting comment...");
 			setFormLocked(true);
 
-			fetch(queryString)
+			fetch(urlEditComment(editKey, name, content))
 				.then((response) => response.json())
 				.then((data) => {
 					switch (data.status) {
@@ -506,20 +552,16 @@
 			if (setAndReturnIsTestInvalid(test))
 				return;
 
-			let subject = g_commentSubject;
-			let parent = g_currentReplyToId;
-			let queryString = `http://localhost:8801/comment-post?subject=${subject}&parent=${parent}&test=${test}&name=${name}&content=${content}`
-
 			setCommentFormStatus("Submitting comment...");
 			setFormLocked(true);
 
-			fetch(queryString)
+			fetch(urlPostComment(name, content, test))
 				.then((response) => response.json())
 				.then((data) => {
 					switch (data.status) {
 						case "success":
 							addOwnedComment(data.comment_id, data.edit_key);
-							addCommentToDOM(data.comment_id, parent, name, content, Date.now(), 900);
+							addCommentToDOM(data.comment_id, g_currentReplyToId, name, content, Date.now(), 900);
 
 							setFormStateInitial();
 							setFormNameAndContent("", "");
@@ -574,8 +616,8 @@
 	});
 
 	window.addEventListener("message", (e) => {
-		console.log(e.data);
-		window.document.documentElement.setAttribute("color-theme", e.data.theme);
+		if (e.data.theme)
+			window.document.documentElement.setAttribute("color-theme", e.data.theme);
 	});
 
 	askParentFrameForTheme();
