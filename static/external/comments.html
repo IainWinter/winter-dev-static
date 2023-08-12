@@ -259,7 +259,8 @@
 	function urlPostComment(name, content, test) {
 		uri_encode_name = encodeURIComponent(name)
 		uri_encode_content = encodeURIComponent(content)
-		return `${g_commentHost}/comment-post/${g_commentSubject}/${g_currentReplyToId}?test=${test}&name=${uri_encode_name}&content=${uri_encode_content}`
+		uri_test = test.replaceAll(' ', '').toLowerCase()
+		return `${g_commentHost}/comment-post/${g_commentSubject}/${g_currentReplyToId}?test=${uri_test}&name=${uri_encode_name}&content=${uri_encode_content}`
 	}
 
 	function urlEditComment(name, content) {
