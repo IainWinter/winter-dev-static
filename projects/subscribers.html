@@ -1,0 +1,267 @@
+<html lang="en">
+
+<head>
+	<title>Subscriber Tracker</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" type="image/x-icon" href="../favicon.ico">
+	<link rel="stylesheet" href="../styles/global.css" />
+	<link rel="stylesheet" href="../styles/top.css" />
+</head>
+
+
+		<script>
+			const g_exportRootPath = "../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+	
+<script src="../scripts/no_flashbang.js"></script>
+
+<body color-theme="dark">
+	<div class="main">
+		
+		<div class="top">
+			<h1 class="title">Winter</h1>
+			<div class="nav-section">
+				<div class="nav-links">
+					<a class="nav-link" href="../articles">Articles</a>
+					<a class="nav-link" href="../projects">Projects</a>
+					<a class="nav-link" href="../support">Support</a>
+				</div>
+
+				<hr class="nav-separator" />
+
+				<div class="nav-buttons">
+					<img id="toggle-dark-icon" src="../icons/light_off.svg" onclick="toggleDark();"/>
+				</div>
+			</div>
+		</div>
+		<script src="../scripts/toggle_dark.js"></script>
+	
+		<div class="page full-page">
+			<h1 class="page-title">Subscriber Tracker</h1>
+			
+
+<div id="chart-container">
+	<div class="tooltip" id="tooltip" style="display: none;"></div>
+	<a class="hi" href="https://www.youtube.com/channel/UC0gQ1dLGf5-504RQu-awotA?sub_confirmation=1" target="_BLANK">
+		Click here 💯
+	</a>
+</div>
+
+<style>
+	text {
+		stroke: none;
+		font-size: 16px;
+		font-weight: 100;
+		color: var(--text-color);
+	}
+
+	.line {
+		stroke: red;
+		stroke-width: 3px;
+    	stroke-linecap: round;
+	}
+
+	.hi {
+		/*  0  o
+		      \   
+		     \_/
+		*/
+
+		position: absolute;
+		bottom: 200px;
+   		right: 60px;
+		color: white;
+		background: #ff1b1b;
+		padding: 5px;
+		border-radius: 7px;
+		text-decoration: none;
+
+		border: 0px dashed white;
+	}
+
+	#chart-container {
+		flex-grow: 1;
+		stroke: var(--text-color);
+		color: var(--text-color);
+		min-height: 150px;
+		position: relative;
+	}
+
+	.tooltip {
+		position: absolute;
+		background: none;
+		border: 1px solid var(--accent-color);
+		padding: 10px;
+		border-radius: 5px;
+		pointer-events: none;
+		color: var(--text-color);
+
+		/* hard code adjusted pos */
+		transform: translate(calc(-100% + 20px), 16px);
+	}
+
+	.dot {
+		stroke: red;
+		stroke-width: 3px;
+		fill: none;
+		animation-duration: 3s;
+		animation-name: pulse;
+		animation-iteration-count: infinite;
+	}
+
+	@keyframes pulse {
+		from {
+			stroke-width: 3px;
+			stroke-opacity: 1;
+			transform: scale(0.3);
+		}
+
+		to {
+			stroke-width: 0;
+			stroke-opacity: 0;
+			transform: scale(4);
+		}
+	}
+</style>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script>
+	// Define the dimensions and margins for the chart
+	const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+	const svgWidth = 800;
+	const svgHeight = 400;
+	const svgMinHeight = 400;
+
+	const width = svgWidth - margin.left - margin.right;
+	const height = svgHeight - margin.top - margin.bottom;
+	const minHeight = svgMinHeight + margin.top + margin.bottom;
+
+	// Create an SVG element and append it to the body
+	const svg = d3.select("#chart-container")
+		.append("svg")
+		.attr("width", "100%")
+		.attr("height", "100%")
+		.style("min-height", minHeight)
+		.append("g")
+		.attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+	// Create scales for x and y axes
+	const x = d3.scaleTime().range([100, width]);
+	const y = d3.scaleLinear().range([height, 0]);
+
+	// Define the line generator
+	const line = d3.line()
+		.x(d => x(d.time))
+		.y(d => y(d.count));
+
+	let lastPoint = 0;
+	const tooltip = d3.select("#tooltip");
+
+	d3.json("http://127.0.0.1:8001/").then(data => {
+		lastPoint = data[data.length - 1];
+
+		// Set the domain of the x and y scales
+		x.domain(d3.extent(data, d => d.time));
+		y.domain([0, d3.max(data, d => d.count)]);
+		
+		// Add the line path
+		svg.append("path")
+			.datum(data)
+			.attr("class", "line")
+			.attr("fill", "none")
+			.attr("d", line);
+
+		// Add x-axis
+		svg.append("g")
+			.attr("class", "x-axis")
+			.attr("transform", `translate(0, ${height})`)
+			.call(d3.axisBottom(x));
+
+		// Add y-axis
+		svg.append("g")
+			.attr("class", "y-axis")
+			.call(d3.axisLeft(y));
+
+		// Add a circle at the last data point
+		svg.append("circle")
+			.attr("class", "dot")
+			.attr("r", 5);
+
+		tooltip.html(`${lastPoint.count}`);
+
+		resizeChart();
+	})
+		.catch(error => {
+			console.error("Error loading data:", error);
+		});
+
+	// Function to create or update the chart
+	function resizeChart() {
+		// Get the container dimensions
+		const container = document.getElementById("chart-container");
+		const width = container.clientWidth - margin.left - margin.right;
+		const height = Math.max(svgMinHeight, container.clientHeight - margin.top - margin.bottom) - 80;
+
+		// Update the SVG dimensions
+		svg.attr("width", width)
+			.attr("height", height);
+
+		// Update the scales
+		x.range([0, width]);
+		y.range([height, 0]);
+
+		// Update the x and y axes
+		svg.select(".x-axis")
+			.attr("transform", `translate(0, ${height})`)
+			.call(d3.axisBottom(x));
+
+		svg.select(".y-axis")
+			.call(d3.axisLeft(y));
+
+		// Update the line path
+		svg.select(".line")
+			.attr("d", line);
+
+		const dotX = x(lastPoint.time);
+		const dotY = y(lastPoint.count);
+
+		const tipX = dotX + margin.left;
+		const tipY = dotY + margin.top;
+		
+		svg.select(".dot")
+			.attr("cx", x(lastPoint.time))
+			.attr("cy", y(lastPoint.count))
+			.style("transform-origin", `${dotX}px ${dotY}px`);
+
+		tooltip.style("display", "block")
+			.style("left", `${tipX}px`)
+			.style("top", `${tipY}px`);
+
+		if (width < 600) {
+			svg.select(".x-axis")
+				.selectAll("text")
+				.style("text-anchor", "end")
+				.attr("dx", "-0.8em")
+				.attr("dy", "0.15em")
+				.attr("transform", "rotate(-45)");
+		}
+
+		else {
+			svg.select(".x-axis")
+				.selectAll("text")
+				.style("text-anchor", null)
+				.attr("dx", null)
+				.attr("dy", "1em") // this seems to be the default
+				.attr("transform", null);
+		}
+	}
+
+	window.addEventListener("resize", resizeChart);
+
+</script>
+		</div>
+	</div>
+</body>
+
+</html>

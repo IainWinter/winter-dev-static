@@ -1,7 +1,7 @@
 <html lang="en">
 
 <head>
-	<title>Making games with Falling Sand part 1</title>
+	<title>GJK: Collision detection algorithm in 2D/3D</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="icon" type="image/x-icon" href="../favicon.ico">
 	<link rel="stylesheet" href="../styles/global.css" />
@@ -40,530 +40,414 @@
 		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
-			<h1 class="page-title">Making games with Falling Sand part 1</h1>
+			<h1 class="page-title">GJK: Collision detection algorithm in 2D/3D</h1>
 			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/wZJCQQPaGZI.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/wZJCQQPaGZI?rel=0&modestbranding=1&autoplay=1')"></img>
+				<img class="article-embed-thumb" src="../thumbnails/MDusDn8oTSE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MDusDn8oTSE?rel=0&modestbranding=1&autoplay=1')"></img>
 			</span>
-		<p>Simulating falling sand is no different from any other cellular automata. We have a big gird of cells and a set of rules that get applied to each cell every frame. You've probably heard of the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>. In that cellular automata, the rules are based on the number of neighbors surrounding a cell. For falling sand, we mostly look at if there is empty space below a cell for it to move into. This creates the look of particles cascading down.</p><p>One of the more interesting aspects of cellular automata is how complex behavior can emerge from such simple rules. That sounds like an interesting project could be created from only a few lines of code! Let's look at how you could go about making one of these in the Java version of Processing. You can download Processing <a class="underline" target="_blank" href="https://processing.org/">here</a> if you want to follow along.</p>
-			<h2 class="article-subtitle mark-section" id=Java>
-				Java version
-				<a class="article-subtitle-id-link" href="#Java">#</a>
+		<p>In my last article, I only covered sphere vs. sphere collisions because they are the simplest to compute. Spheres are nice and all, but there comes a time when more complex shapes are needed. One popular algorithm for testing collisions is the Gilbert-Johnson-Keerthi algorithm, or GJK for short. With it we can detect collisions between any two convex polygons.</p><p>The GJK algorithm is very useful and widely used, but no good visualization or concise explanations exist for some reason. A few years ago, I listened and relistened to a video by <a class="underline" target="_blank" href="https://www.youtube.com/watch?v=Qupqu1xe7Io">Casey Muratori</a> that explains the algorithm in great detail and goes through some smart insights that give a good mental image of how it works. Yet I have found no full interactive visualizations. Let's jump into it!</p>
+			<h2 class="article-subtitle mark-section" id=Difference>
+				Difference between spheres and polygons
+				<a class="article-subtitle-id-link" href="#Difference">#</a>
 			</h2>
-		<p>We'll start with the standard setup and draw functions. Before we fill these in, we should establish what our particles will be. For simplicity, color will determine the particle types, so let's define some colors at the top.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">sketch.pde</p>
-				<pre class="article-code-text processing">
-</span><span class="code-t">color </span><span class="code-w">_EMPTY </span><span class="code-s">= </span><span class="code-f">color</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">);
-</span><span class="code-t">color </span><span class="code-w">_SAND  </span><span class="code-s">= </span><span class="code-f">color</span><span class="code-s">(</span><span class="code-d">255</span><span class="code-s">, </span><span class="code-d">150</span><span class="code-s">, </span><span class="code-d">50</span><span class="code-s">);
-
-</span><span class="code-r">void </span><span class="code-m">setup</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{ 
-</span><span class="code-s">}
-
-</span><span class="code-r">void </span><span class="code-m">draw</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>In setup we need to set the size and background. I like to use a size of 800x800 pixels, and we need to set the background to the empty particle color. We should also uncap the framerate from 60 to allow this to run faster if it can.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-</span><span class="code-r">void </span><span class="code-m">setup</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-  </span><span class="code-f">size</span><span class="code-s">(</span><span class="code-d">800</span><span class="code-s">, </span><span class="code-d">800</span><span class="code-s">);
-  </span><span class="code-f">background</span><span class="code-s">(</span><span class="code-w">_EMPTY</span><span class="code-s">);
-  </span><span class="code-f">frameRate</span><span class="code-s">(</span><span class="code-d">1000</span><span class="code-s">);
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>Each time the draw function is called we will step our simulation. Because we are only using color, let's use the pixels array as the storage for our cells. Each frame we need to call loadPixels to copy the displayed frame into the pixels array. This first frame will be all  _EMPTY because we called background.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-</span><span class="code-r">void </span><span class="code-m">draw</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-  </span><span class="code-f">loadPixels</span><span class="code-s">(</span><span class="code-s">);
-</span></pre>
-			</div>
-		<p>After we load the pixels, we can iterate over them and check if they match a particle type that we know about.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-  </span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">int </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">x </span><span class="code-s">&lt width;  </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
-  </span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">int </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">y </span><span class="code-s">&lt height; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
-    </span><span class="code-t">color </span><span class="code-v">cell </span><span class="code-s">= </span><span class="code-f">get</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">);
-    
-    </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">_SAND</span><span class="code-s">) </span><span class="code-s">{
-</span></pre>
-			</div>
-		<p>We want sand to form dune like shapes, so let's encode a pyramid into its rules. We need to check directly below, down to the left, and down to the right.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/sand.png"></img><p>By default, it should move down if possible, but if that cell is occupied, we'll check the other two directions.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-		</span><span class="code-t">boolean </span><span class="code-v">down  </span><span class="code-s">= </span><span class="code-w">isEmpty</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">,     </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">);
-		</span><span class="code-t">boolean </span><span class="code-v">left  </span><span class="code-s">= </span><span class="code-w">isEmpty</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">);
-		</span><span class="code-t">boolean </span><span class="code-v">right </span><span class="code-s">= </span><span class="code-w">isEmpty</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">);
-
-		     </span><span class="code-j">if</span><span class="code-s">(</span><span class="code-v">down</span><span class="code-s">)  </span><span class="code-w">setCell</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">,     </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-w">_SAND</span><span class="code-s">);
-		</span><span class="code-j">else </span><span class="code-j">if</span><span class="code-s">(</span><span class="code-v">left</span><span class="code-s">)  </span><span class="code-w">setCell</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-w">_SAND</span><span class="code-s">);
-		</span><span class="code-j">else </span><span class="code-j">if</span><span class="code-s">(</span><span class="code-v">right</span><span class="code-s">) </span><span class="code-w">setCell</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-w">_SAND</span><span class="code-s">);
-
-		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">down </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">left </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">right</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-w">setCell</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-w">_EMPTY</span><span class="code-s">); 
-		</span><span class="code-s">}
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>This looks ok, but the order of if statements matters. Because we put the left check before right, if both spaces are open, the particle will always move left. This creates an artificial look, but we can easily fix it by adding a little randomness to shuffle the direction if both cells are empty.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">left </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-v">right</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-t">boolean </span><span class="code-v">rand </span><span class="code-s">= </span><span class="code-f">random</span><span class="code-s">(</span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-s">.</span><span class="code-d">5;
-		</span><span class="code-v">left  </span><span class="code-s">= </span><span class="code-v">rand;
-		</span><span class="code-v">right </span><span class="code-s">= </span><span class="code-s">!</span><span class="code-v">rand;
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>Finally, we can close the for loops and call updatePixels to copy our frame to the display.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-	</span><span class="code-s">}
-
-	</span><span class="code-f">updatePixels</span><span class="code-s">(</span><span class="code-s">);
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>To draw particles on the screen with the mouse, we can add these lines after loadPixels.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text processing">
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-p">mousePressed</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">int </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">x </span><span class="code-s">&lt </span><span class="code-d">1; </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">int </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">y </span><span class="code-s">&lt </span><span class="code-d">1; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-w">setCell</span><span class="code-s">(</span><span class="code-p">mouseX </span><span class="code-s">+ </span><span class="code-v">x</span><span class="code-s">, </span><span class="code-p">mouseY </span><span class="code-s">+ </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-w">_SAND</span><span class="code-s">);
-		</span><span class="code-s">}
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>You can create other particle types by adding more rules in a similar way. For example, water and a stationary barrier type are the most straight forward and where I would start. Water is like sand, but we check directly to the left and right instead of diagonal, which gives the effect of liquid flow. Barriers have no movement properties but fill space so the other types can't move through them.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/water.png"></img><h3>Common issues</h3><p>I saved the helper functions for last to highlight two common issues. The biggest gotcha with these types of simulations is that the order of iteration effects the behavior dramatically, and if we aren't careful, we could end up updating particles multiple times or even lose them entirely.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">sketch.pde</p>
-				<pre class="article-code-text processing">
-</span><span class="code-t">boolean </span><span class="code-w">inBounds</span><span class="code-s">(</span><span class="code-t">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
-  </span><span class="code-r">return </span><span class="code-a">x </span><span class="code-s">&gt</span><span class="code-s">= </span><span class="code-d">0    </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">y </span><span class="code-s">&gt</span><span class="code-s">= </span><span class="code-d">0
-      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">x </span><span class="code-s">&lt </span><span class="code-p">width </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">y </span><span class="code-s">&lt </span><span class="code-p">height;
-</span><span class="code-s">}
-
-</span><span class="code-t">boolean </span><span class="code-w">isEmpty</span><span class="code-s">(</span><span class="code-t">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">int </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
-  </span><span class="code-r">return </span><span class="code-w">inBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-p">pixels</span><span class="code-s">[</span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-a">y </span><span class="code-s">* </span><span class="code-p">width</span><span class="code-s">] </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-w">_EMPTY;
-</span><span class="code-s">}
-
-</span><span class="code-r">void </span><span class="code-w">setCell</span><span class="code-s">(</span><span class="code-t">int </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">int </span><span class="code-a">y</span><span class="code-s">, color </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{
-  </span><span class="code-p">pixels</span><span class="code-s">[</span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-a">y </span><span class="code-s">* </span><span class="code-p">width</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-a">cell;
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>We have four options for how we order the iteration. No matter which we pick, there will always be slight issues. Let's see why.</p><p>If we iterate top to bottom, we end up updating the same particle multiple times. This results in a teleportation effect where a particle will only take a single frame to reach the floor. We could change the iteration to bottom to top, but then if we want particles that moves up, we run into the same issue. This highlights the fact that no matter which direction we pick, there will always be issues. Clearly, the solution must have more to it than just finding a magic ordering...</p>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/rh_AZGzRTcQ.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/rh_AZGzRTcQ?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		<p>The band aid solution in this Processing version comes from the subtle details of how the pixel array works. In the helper functions we read and write to the pixels array, but in draw we use the get function. Even though the docs don't say this, get must read from the displayed pixels array, which we don't update until we call updatePixels. This allows us to dodge the issue of updating particles multiple times because nothing updates until the end of the frame from get's perspective.</p><p>The second problem we can only mitigate. In isEmpty we don't use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we've somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/conflict.png"></img><p>Now that we have an idea of how the basics work, and common pitfalls, let's jump over to C++ and see how these can be solved.</p>
-			<h2 class="article-subtitle mark-section" id=C++>
-				C++ Version
-				<a class="article-subtitle-id-link" href="#C++">#</a>
+		<p>Testing for a collision between spheres is easy because there are only two points in the system. This leaves us with a single vector that we can compare against the sum of their radii to determine if there is a collision.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/circles.html"></iframe><p>With polygons we cannot make such simplifications. They are made from multiple vertices, removing any apparent way of finding their distance and clear radius property to compare against. We need a smarter way of testing for a collision.</p><p>Like we subtracted the points in the sphere system, let's see what happens if we subtract the vertices of the polygons.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/sub_poly.html"></iframe><p>Subtracting two polygons with the same number of vertices is straightforward, but if we want to support various polygons, we need to subtract each vertex from every vertex on the other polygon. Because there are multiple vertices, we are not left with a single vector, but many that form another polygon. This results in a cloud of <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number vertices that we need to process further to select the outer convex hull from.</p><p>This outer hull is known as the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Minkowski_addition">Minkowski difference</a>. It represents the distance between every point of the two polygons. We are going to use it to turn two polygons into one that we can analyze to detect a collision. The key is that if the origin is inside the difference, there must have been two points that subtracted to 0; meaning there is overlap somewhere.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/mink_diff.html"></iframe>
+			<h2 class="article-subtitle mark-section" id=Abstracting>
+				Abstracting shapes into supporting points
+				<a class="article-subtitle-id-link" href="#Abstracting">#</a>
 			</h2>
-		<p>I plan on expanding this over the next few videos, so I am going to try and make it more of a general sand framework. To start, we don't want to edit the pixels directly because we want more properties than just color. Let's make a CellType enum and store it in a Cell struct along with a Color. In the first version, sand and water both needed to check if the space directly below was free. This hints that the ways that the particles move doesn't have to reflect their type. So, let's keep two enums in each Cell, one for the movement properties and another the type. If we use a bit string for the properties, they can be combined to create more complex patterns.</p>
+		<p>The Minkowski difference is nice for visualization, but far too expensive to compute in real time; we need a way to simplify it.</p><p>The GJK algorithm is only concerned with the outer hull of our cloud of vertices, so it would give a substantial speed up if we could cut down on the time spent finding them. Let's think about what puts a vertex on the hull. If we look closer, notice that those vertices have the most extreme components. They got to their locations from subtraction between two other vertices, so for one to be the most extreme, it must have come from the most extreme vertices on the source polygons. If we define 'most extreme' as the furthest in some direction, we can play with the math to get this speed increase.</p><p>Finding the furthest vertex is done by iterating over the set of vertices and finding the one with the largest dot product in a direction. Let <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover><mi>D</mi><mo stretchy="true">&#x02192;</mo></mover></mrow></math></span> be the direction and <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> be the cloud of vertices.</p>
+			<div class="article-equation">
+	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mo stretchy="false">&#x00028;</mo><mi>A</mi><mo>&#x02212;</mo><mi>B</mi><mo stretchy="false">&#x00029;</mo></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
+			</div>
+	   <p>Computing <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> took <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number of steps; making this function an <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>O</mi><mo stretchy="false">&#x00028;</mo><msup><mi>n</mi><mn>2</mn></msup><mo stretchy="false">&#x00029;</mo></mrow></math></span> operation. Luckily for us, we can distribute and never have to compute the full difference.</p><p>If we distribute the dot product and max function we're left with this:</p>
+			<div class="article-equation">
+	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x0007D;</mo></mrow></math>
+			</div>
+	   
+			<div class="article-equation">
+	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x0007D;</mo><mo>&#x02212;</mo><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mo>&#x02212;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mo stretchy="false">&#x00029;</mo><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
+			</div>
+	   <p>Now all we need is <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002B;</mo><mi>B</mi></mrow></math></span> steps; turning our quadratic time function into a linear one.</p><p>We need to reverse the direction for <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span> when we distribute max because we want to retain the max value. We want the lest extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>B</mi></mrow></math></span> to subtract from the most extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span>.</p><img class="article-embed" src="../articles/gjk-algorithm/supports.jpg"></img><p>These vertices are referred to as <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Support_function">supporting points</a> and give a view into the Minkowski difference without ever calculating more than we need.</p><p>Let's look at the implementation -- I'm going to continue to use the Collider structs from the <a class="underline" target="_blank" href="../articles/physics-engine">physics engine</a> article for consistency, but will only include the new pieces from this article.</p><p>We'll start by adding a function that finds the support point in a given direction. Let's call it FindFurthestPoint. If we have other special types of colliders like spheres, capsules, or planes, we can override this function allowing them to be used with GJK as well.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Cell.h</p>
+				<p class="article-code-file mark-section">Collider.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-r">enum </span><span class="code-t">CellProperties </span><span class="code-s">{
-	</span><span class="code-d">NONE           </span><span class="code-s">= </span><span class="code-d">0b0</span><span class="code-d">0000000</span><span class="code-s">,
-	</span><span class="code-d">MOVE_DOWN      </span><span class="code-s">= </span><span class="code-d">0b0</span><span class="code-d">0000001</span><span class="code-s">,
-	</span><span class="code-d">MOVE_DOWN_SIDE </span><span class="code-s">= </span><span class="code-d">0b0</span><span class="code-d">0000010</span><span class="code-s">,
-	</span><span class="code-d">MOVE_SIDE      </span><span class="code-s">= </span><span class="code-d">0b0</span><span class="code-d">0000100
-</span><span class="code-s">};
-
-</span><span class="code-r">inline </span><span class="code-t">CellProperties </span><span class="code-s">operator|</span><span class="code-s">(</span><span class="code-t">CellProperties </span><span class="code-a">a</span><span class="code-s">, </span><span class="code-t">CellProperties </span><span class="code-a">b</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-j">return </span><span class="code-t">CellProperties</span><span class="code-s">(</span><span class="code-s">(</span><span class="code-r">int</span><span class="code-s">)</span><span class="code-a">a </span><span class="code-s">| </span><span class="code-s">(</span><span class="code-r">int</span><span class="code-s">)</span><span class="code-a">b</span><span class="code-s">);
-</span><span class="code-s">}
- 
-</span><span class="code-r">inline </span><span class="code-r">auto </span><span class="code-s">operator&</span><span class="code-s">(</span><span class="code-t">CellProperties </span><span class="code-a">a</span><span class="code-s">, </span><span class="code-t">CellProperties </span><span class="code-a">b</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-j">return </span><span class="code-s">(</span><span class="code-r">int</span><span class="code-s">)</span><span class="code-a">a </span><span class="code-s">& </span><span class="code-s">(</span><span class="code-r">int</span><span class="code-s">)</span><span class="code-a">b;
-</span><span class="code-s">}
-
-</span><span class="code-r">enum </span><span class="code-t">CellType </span><span class="code-s">{
-	</span><span class="code-d">EMPTY</span><span class="code-s">,
-	</span><span class="code-d">SAND</span><span class="code-s">,
-	</span><span class="code-d">WATER</span><span class="code-s">,
-	</span><span class="code-d">ROCK
-</span><span class="code-s">};
- 
-</span><span class="code-r">struct </span><span class="code-t">Cell </span><span class="code-s">{
-	</span><span class="code-t">CellType       </span><span class="code-w">Type  </span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY;
-	</span><span class="code-t">CellProperties </span><span class="code-w">Props </span><span class="code-s">= </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">NONE;
-
-	</span><span class="code-t">Color </span><span class="code-w">Color; </span><span class="code-c">// rgba
+</span><span class="code-r">struct </span><span class="code-t">Collider </span><span class="code-s">{
+	</span><span class="code-r">virtual </span><span class="code-t">vec3 </span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">= </span><span class="code-d">0;
 </span><span class="code-s">};
 </span></pre>
 			</div>
-		<p>Now that we have defined our Cell, we need a way to store them. Let's make a new class called SandWorld and store an array of Cells in it. In the constructor we can specify a width, height, and scale in pixels. This will allow us to easily change the size of the cells.</p>
+		<p>Next, we'll make a MeshCollider with a list of vertices to act as our polygon. FindFurthestPoint needs to loop over each vertex and compare the distance along the direction. We'll keep track of the max vertex & distance to compare. Once we have iterated over all the points, we'll return the max point.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">SandWorld.h</p>
+				<p class="article-code-file mark-section">MeshCollider.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">SandWorld </span><span class="code-s">{
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">const </span><span class="code-t">size_t </span><span class="code-w">m_width  </span><span class="code-s">= </span><span class="code-d">0;
-	</span><span class="code-r">const </span><span class="code-t">size_t </span><span class="code-w">m_height </span><span class="code-s">= </span><span class="code-d">0;
-	</span><span class="code-r">const </span><span class="code-r">double </span><span class="code-w">m_scale </span><span class="code-s">= </span><span class="code-d">1;
+</span><span class="code-r">struct </span><span class="code-t">MeshCollider </span><span class="code-s">: </span><span class="code-t">Collider
+</span><span class="code-s">{
 </span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-t">Cell</span><span class="code-s">* </span><span class="code-w">m_cells </span><span class="code-s">= </span><span class="code-r">nullptr;
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">m_vertices;
+ 
+</span><span class="code-r">public</span><span class="code-s">:
+	</span><span class="code-t">vec3 </span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-r">override
+	</span><span class="code-s">{
+		</span><span class="code-t">vec3  </span><span class="code-v">maxPoint;
+		</span><span class="code-r">float </span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-p">FLT_MAX;
+ 
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">vertex </span><span class="code-s">: </span><span class="code-w">m_vertices</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-r">float </span><span class="code-v">distance </span><span class="code-s">= </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">vertex</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&gt </span><span class="code-v">maxDistance</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-v">distance;
+				</span><span class="code-v">maxPoint </span><span class="code-s">= </span><span class="code-v">vertex;
+			</span><span class="code-s">}
+		</span><span class="code-s">}
+ 
+		</span><span class="code-j">return </span><span class="code-v">maxPoint;
+	</span><span class="code-s">}
+</span><span class="code-s">};
+</span></pre>
+			</div>
+		<p>We can roll all of this into a function called Support that will take two colliders and a direction and return the vertex on the Minkowski difference.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">GJK.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-t">vec3 </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-j">return </span><span class="code-a">colliderA</span><span class="code-s">.</span><span class="code-f">FindFurthestPoint</span><span class="code-s">( </span><span class="code-a">direction</span><span class="code-s">)
+	     </span><span class="code-s">- </span><span class="code-a">colliderB</span><span class="code-s">.</span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-a">direction</span><span class="code-s">);
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>With these functions, we have abstracted away not only any convex polygon, but any collider type that implements FindFurthestPoint into a single function that we can use in the algorithm.</p>
+			<h2 class="article-subtitle mark-section" id=GJK:>
+				GJK: Surrounding the origin
+				<a class="article-subtitle-id-link" href="#GJK:">#</a>
+			</h2>
+		<p>The goal of the GJK algorithm is to determine if the origin is within the Minkowski difference. This would be easy, but we've thrown out the complete difference for the sake of performance. We only have the Support function that gives us one vertex at a time. We need to iteratively search for and build up what's referred to as a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> around the origin.</p><p>A simplex is defined as a shape that has <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></span> number of vertices with <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math></span> being the number of dimensions. Practically, this represents the simplest shape that can 'select' a region in space. For example, in 2D a triangle is the simplest shape that can select an area containing a specific point. These shapes have simple tests that we can use to determine which vertex, edge, or face is closest to the origin. Depending on which feature is closest, we'll remove, add, or swap points to make the simplex closer to the origin. If we find that the closest feature is already the closest possible, but the origin is not inside, we know there is no collision. Otherwise, if we find the origin inside the simplex we know there has been a collision.</p><p>We get the vertices for the simplex from the Support function, so we need to find the direction to the origin from the closest feature. Searching towards the origin allows the algorithm to converge quickly. Let's look an example. We'll start with an arbitrary vertex then add or remove vertices every iteration until we surround the origin or find it's impossible.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/slide-show.html"></iframe><p>We can see that there are two cases that we need to deal with: a line and triangle. We need one more case in the form of a tetrahedron to select a volume if we want 3D collision detection.</p><div class="article-embed article-embed-no-height-limit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 214.72 64.21">
+	<defs>
+		<style>
+			.cls-1,
+			.cls-3 {
+				fill: var(--text-color);
+			}
+
+			.cls-1,
+			.cls-2,
+			.cls-4,
+			.cls-5 {
+				stroke: var(--text-color);
+			}
+
+			.cls-1,
+			.cls-2,
+			.cls-4,
+			.cls-5,
+			.cls-6,
+			.cls-8,
+			.cls-9 {
+				stroke-miterlimit: 10;
+			}
+
+			.cls-2,
+			.cls-4,
+			.cls-5,
+			.cls-6,
+			.cls-8,
+			.cls-9 {
+				fill: none;
+			}
+
+			.cls-4 {
+				stroke-dasharray: 12;
+			}
+
+			.cls-5 {
+				stroke-dasharray: 3 1;
+			}
+
+			.cls-6,
+			.cls-8,
+			.cls-9 {
+				stroke: #838bc5;
+			}
+
+			.cls-7 {
+				fill: #838bc5;
+			}
+
+			.cls-8 {
+				stroke-dasharray: 20 0 62 27;
+			}
+
+			.cls-9 {
+				stroke-dasharray: 20 0 79 52;
+			}
+		</style>
+	</defs>
+	<g id="Layer_2" data-name="Layer 2">
+		<g id="Layer_1-2" data-name="Layer 1">
+			<circle class="cls-1" cx="3" cy="40.8" r="2.5"></circle>
+			<circle class="cls-1" cx="52.28" cy="59.57" r="2.5"></circle>
+			<circle class="cls-1" cx="60.28" cy="18.74" r="2.5"></circle>
+			<line class="cls-2" x1="60.28" y1="18.74" x2="52.28" y2="59.57"></line>
+			<circle class="cls-1" cx="104.18" cy="61.21" r="2.5"></circle>
+			<circle class="cls-1" cx="112.18" cy="20.38" r="2.5"></circle>
+			<line class="cls-2" x1="112.18" y1="20.38" x2="104.18" y2="61.21"></line>
+			<circle class="cls-1" cx="138.39" cy="34.85" r="2.5"></circle>
+			<line class="cls-2" x1="112.18" y1="20.38" x2="138.39" y2="34.85"></line>
+			<line class="cls-2" x1="104.18" y1="61.21" x2="138.39" y2="34.85"></line>
+			<circle class="cls-1" cx="177.51" cy="61.05" r="2.5"></circle>
+			<circle class="cls-1" cx="185.51" cy="20.21" r="2.5"></circle>
+			<line class="cls-2" x1="185.51" y1="20.21" x2="177.51" y2="61.05"></line>
+			<circle class="cls-1" cx="211.72" cy="34.69" r="2.5"></circle>
+			<line class="cls-2" x1="185.51" y1="20.21" x2="211.72" y2="34.69"></line>
+			<line class="cls-2" x1="177.51" y1="61.05" x2="211.72" y2="34.69"></line>
+			<circle class="cls-3" cx="198" cy="37.35" r="1.5"></circle>
+			<circle class="cls-4" cx="198" cy="37.35" r="1.5"></circle>
+			<line class="cls-5" x1="185.51" y1="20.21" x2="198" y2="37.35"></line>
+			<line class="cls-5" x1="177.51" y1="61.05" x2="198" y2="37.35"></line>
+			<line class="cls-5" x1="211.72" y1="34.69" x2="198" y2="37.35"></line>
+			<line class="cls-6" x1="39.53" y1="40.77" x2="19.17" y2="40.63"></line>
+			<polygon class="cls-7" points="38.67 37.77 43.83 40.8 38.63 43.75 38.67 37.77"></polygon>
+			<line class="cls-6" x1="90.26" y1="48.68" x2="69.89" y2="48.55"></line>
+			<polygon class="cls-7" points="89.4 45.69 94.56 48.71 89.36 51.67 89.4 45.69"></polygon>
+			<line class="cls-6" x1="168.7" y1="41.21" x2="148.33" y2="41.08"></line>
+			<polygon class="cls-7" points="167.84 38.22 173 41.24 167.8 44.2 167.84 38.22"></polygon>
+			<line class="cls-6" x1="74.25" y1="41" x2="94.61" y2="41.14"></line>
+			<polygon class="cls-7" points="75.11 44 69.94 40.97 75.15 38.02 75.11 44"></polygon>
+			<line class="cls-6" x1="152.64" y1="49.11" x2="173" y2="49.24"></line>
+			<polygon class="cls-7" points="153.5 52.1 148.34 49.08 153.54 46.12 153.5 52.1"></polygon>
+			<path class="cls-8"
+				d="M48,29l-1.57-2c-.81-1.17-4.41-6.62-3-13.26C45.14,5.91,53.06.28,61.14.69c9.75.49,16.88,9.63,16.66,18a16.35,16.35,0,0,1-4.74,10.7C67.73,34.72,58.87,36,50.64,32.35">
+			</path>
+			<polygon class="cls-7" points="49.75 26.44 50.64 32.35 45.07 30.16 49.75 26.44"></polygon>
+			<path class="cls-9"
+				d="M99.51,31.07a12.3,12.3,0,0,1-1.62-1.55c-4.36-5.07-2.62-12.11-2.33-13.25,2.43-9.8,13.58-13.84,15-14.33,13.1-4.54,30.1,2,36.91,15,.77,1.46,6.43,12.26,1.95,19-5.4,8.06-24.15,8.17-46.11-2.8">
+			</path>
+			<polygon class="cls-7" points="100.3 27.93 103.31 33.1 97.32 33.12 100.3 27.93"></polygon>
+		</g>
+	</g>
+</svg></div><p>To represent the simplex, let's make a wrapper struct around an std::array. This will allow us to keep track of the number of points, while keeping the memory on the stack for quick access.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">Simplex.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">struct </span><span class="code-t">Simplex </span><span class="code-s">{
+</span><span class="code-r">private</span><span class="code-s">:
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">array</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">&gt </span><span class="code-w">m_points;
+	</span><span class="code-r">int </span><span class="code-w">m_size;
 
 </span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-f">SandWorld</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">width</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">height</span><span class="code-s">, </span><span class="code-r">double </span><span class="code-a">scale</span><span class="code-s">)
-		</span><span class="code-s">: </span><span class="code-w">m_width  </span><span class="code-s">(</span><span class="code-a">width  </span><span class="code-s">/ </span><span class="code-a">scale</span><span class="code-s">)
-		</span><span class="code-s">, </span><span class="code-w">m_height </span><span class="code-s">(</span><span class="code-a">height </span><span class="code-s">/ </span><span class="code-a">scale</span><span class="code-s">)
-		</span><span class="code-s">, </span><span class="code-w">m_scale  </span><span class="code-s">(</span><span class="code-a">scale</span><span class="code-s">)
+	</span><span class="code-f">Simplex</span><span class="code-s">(</span><span class="code-s">)
+		</span><span class="code-s">: </span><span class="code-w">m_size </span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">)
+	</span><span class="code-s">{</span><span class="code-s">}
+
+	</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-s">operator=</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">initializer_list</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-a">list</span><span class="code-s">) 
 	</span><span class="code-s">{
-		</span><span class="code-w">m_cells </span><span class="code-s">= </span><span class="code-r">new </span><span class="code-t">Cell</span><span class="code-s">[</span><span class="code-w">m_width </span><span class="code-s">* </span><span class="code-w">m_height</span><span class="code-s">];
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">point </span><span class="code-s">: </span><span class="code-a">list</span><span class="code-s">)
+			</span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-w">m_size</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">point;
+
+		</span><span class="code-j">return </span><span class="code-s">*</span><span class="code-r">this;
 	</span><span class="code-s">}
 
-	</span><span class="code-f">~SandWorld</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-r">delete</span><span class="code-s">[</span><span class="code-s">] </span><span class="code-w">m_cells;
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>We'll need some functions for getting the cells out of the world, let's add two: one that takes x and y coordinates, and another that takes a flat index.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-	</span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">index</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-a">index</span><span class="code-s">]; 
-	</span><span class="code-s">}
-
-	</span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">);
-	</span><span class="code-s">}
-
-	</span><span class="code-t">size_t </span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-a">y </span><span class="code-s">* </span><span class="code-w">m_width;
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>And to get us back to where we were, let's add the same helper functions from before.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-	</span><span class="code-r">bool </span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-a">x </span><span class="code-s">&lt </span><span class="code-w">m_width 
-			</span><span class="code-s">&</span><span class="code-s">& </span><span class="code-a">y </span><span class="code-s">&lt </span><span class="code-w">m_height;
-	</span><span class="code-s">}
-
-	</span><span class="code-r">bool </span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">) 
-			</span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">.</span><span class="code-w">Type </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY;
-	</span><span class="code-s">}
-
-	</span><span class="code-r">void </span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-w">m_cells</span><span class="code-s">[GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">)</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-a">cell;
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>Processing gave us two arrays to work with, but before we just add another one and call it a day, let's think about a way to actually solve the issues that arise from the iteration ordering. The main problem is that moves are executed as they come, but really, we should gather all the possible moves, then execute them at the end to give each one a fair chance.</p><p>Let's add a vector to the SandWorld, and make a new function called MoveCell that adds a move to the list.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">&gt </span><span class="code-w">m_changes; </span><span class="code-c">// destination, source
-
-	</span><span class="code-r">void </span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">yto</span><span class="code-s">)
+	</span><span class="code-r">void </span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">point</span><span class="code-s">) 
 	</span><span class="code-s">{
-		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(
-			</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">xto</span><span class="code-s">, </span><span class="code-a">yto</span><span class="code-s">)</span><span class="code-s">,
-			</span><span class="code-f">GetIndex</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">,   </span><span class="code-a">y</span><span class="code-s">)
-		</span><span class="code-s">);
+		</span><span class="code-w">m_points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-a">point</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">};
+		</span><span class="code-w">m_size </span><span class="code-s">= </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-w">m_size </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">);
 	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>After we finish iterating over our cells, we can apply the changes. First, we need to remove any changes that were filled between frames by the SetCell function.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-	</span><span class="code-r">void </span><span class="code-f">CommitCells</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-c">// remove moves that have their destinations filled
 
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">first</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">Type </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY</span><span class="code-s">) </span><span class="code-s">{
-				</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
-				</span><span class="code-v">i</span><span class="code-s">-</span><span class="code-s">-;
-			</span><span class="code-s">}
-		</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>Then we need to sort the list of moves by their destination. This is an unfortunate slowdown but allows us to add and choose moves quicker. We could use a multimap, but the slowdown from accessing the linked lists outweighs the sort.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-		</span><span class="code-c">// sort by destination
+	</span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-r">operator</span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">i</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-a">i</span><span class="code-s">]; </span><span class="code-s">}
+	</span><span class="code-t">size_t </span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_size; </span><span class="code-s">}
 
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">sort</span><span class="code-s">(</span><span class="code-w">m_changes</span><span class="code-s">.begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">,
-			</span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">auto</span><span class="code-s">& </span><span class="code-a">a</span><span class="code-s">, </span><span class="code-r">auto</span><span class="code-s">& </span><span class="code-a">b</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-a">a</span><span class="code-s">.</span><span class="code-w">first </span><span class="code-s">&lt </span><span class="code-a">b</span><span class="code-s">.</span><span class="code-w">first; </span><span class="code-s">}
-		</span><span class="code-s">);
-</span></pre>
-			</div>
-		<p>Then we can iterate over the sorted moves. Each time the destination changes, we'll pick a random source to move from. This allows each particle to get a fair chance at moving into to a cell. Finally, we'll clear the list.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-		</span><span class="code-c">// pick random source for each destination
-
-		</span><span class="code-t">size_t </span><span class="code-v">iprev </span><span class="code-s">= </span><span class="code-d">0;
-
-		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">); </span><span class="code-c">// to catch final move
-
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">- </span><span class="code-d">1; </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">.first </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">first</span><span class="code-s">) </span><span class="code-s">{
-				</span><span class="code-t">size_t </span><span class="code-v">rand </span><span class="code-s">= </span><span class="code-v">iprev </span><span class="code-s">+ </span><span class="code-f">rand_int</span><span class="code-s">(</span><span class="code-v">i </span><span class="code-s">- </span><span class="code-v">iprev</span><span class="code-s">);
-
-				</span><span class="code-t">size_t </span><span class="code-v">dst </span><span class="code-s">= </span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">rand</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">first;
-				</span><span class="code-t">size_t </span><span class="code-v">src </span><span class="code-s">= </span><span class="code-w">m_changes</span><span class="code-s">[</span><span class="code-v">rand</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">second;
-
-				</span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-v">dst</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-v">src</span><span class="code-s">];
-				</span><span class="code-w">m_cells</span><span class="code-s">[</span><span class="code-v">src</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-t">Cell</span><span class="code-s">(</span><span class="code-s">);
-
-				</span><span class="code-v">iprev </span><span class="code-s">= </span><span class="code-v">i </span><span class="code-s">+ </span><span class="code-d">1;
-			</span><span class="code-s">}
-		</span><span class="code-s">}
-
-		</span><span class="code-w">m_changes</span><span class="code-s">.</span><span class="code-f">clear</span><span class="code-s">(</span><span class="code-s">);
-	</span><span class="code-s">}
+	</span><span class="code-r">auto </span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-s">}
+	</span><span class="code-r">auto </span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">- </span><span class="code-s">(</span><span class="code-d">4 </span><span class="code-s">- </span><span class="code-w">m_size</span><span class="code-s">); </span><span class="code-s">}
 </span><span class="code-s">};
 </span></pre>
 			</div>
-		<p>That's it for the core of our little framework, let's see how we can use it to make what we had in the Processing version. I am going to skip over the rendering details because C++ makes that really annoying. I suggest checking out <a class="underline" target="_blank" href="https://www.libsdl.org/">SDL</a> if you don't already have your own solution.</p><p>In an Update function, we'll iterate over the cells in a similar way as before, but now that we have a bit string of movement properties, we can check each one until its respective MoveX function returns true.</p>
+		<p>We need at least one vertex to start, so we'll manually add it. The search direction for the first vertex doesn't matter, but you may get less iterations with a smarter choice. I'm going to use unit x (1, 0, 0) for no particular reason.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Main.cpp</p>
+				<p class="article-code-file mark-section">GJK.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-t">SandWorld </span><span class="code-w">m_world </span><span class="code-s">= </span><span class="code-t">SandWorld</span><span class="code-s">(</span><span class="code-d">1920</span><span class="code-s">, </span><span class="code-d">1080</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">);
-
-</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-c">// Update cells
-
-	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">x </span><span class="code-s">&lt </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_width;  </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
-	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">y </span><span class="code-s">&lt </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_height; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-r">const </span><span class="code-t">Cell</span><span class="code-s">& </span><span class="code-v">cell </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">GetCell</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">);
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveDown    </span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
-		</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN_SIDE </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveDownSide</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
-		</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">cell</span><span class="code-s">.</span><span class="code-w">Props </span><span class="code-s">& </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_SIDE      </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-f">MoveSide    </span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-v">cell</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{</span><span class="code-s">}
-	</span><span class="code-s">}
-
-	</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">CommitCells</span><span class="code-s">(</span><span class="code-s">);
-
-	</span><span class="code-c">// Update the sand texture
-	</span><span class="code-c">// Draw the sand to the screen
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>We can make a function for each movement property that will return true if it finds a valid move.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">MoveDown</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">)
+</span><span class="code-r">bool </span><span class="code-f">GJK</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-r">bool </span><span class="code-v">down </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">);
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">down</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">);
-	</span><span class="code-s">}
-
-	</span><span class="code-j">return </span><span class="code-v">down;
-</span><span class="code-s">}
-
-</span><span class="code-r">bool </span><span class="code-f">MoveDownSide</span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-a">x</span><span class="code-s">, </span><span class="code-t">size_t </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-r">const Cell</span><span class="code-s">& </span><span class="code-a">cell</span><span class="code-s">)
-</span><span class="code-s">{
-	</span><span class="code-r">bool </span><span class="code-v">downLeft  </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">);
-	</span><span class="code-r">bool </span><span class="code-v">downRight </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">IsEmpty</span><span class="code-s">(</span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">);
-
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">downLeft </span><span class="code-s">&</span><span class="code-s">& </span><span class="code-v">downRight</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-v">downLeft  </span><span class="code-s">= </span><span class="code-f">rand_float</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0;
-		</span><span class="code-v">downRight </span><span class="code-s">= </span><span class="code-s">!</span><span class="code-v">downLeft;
-	</span><span class="code-s">}
-
-		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">downLeft</span><span class="code-s">)  </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">x </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">);
-	</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">downRight</span><span class="code-s">) </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">MoveCell</span><span class="code-s">(</span><span class="code-a">x</span><span class="code-s">, </span><span class="code-a">y</span><span class="code-s">, </span><span class="code-a">x </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-a">y </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">);
-
-	</span><span class="code-j">return </span><span class="code-v">downLeft </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">downRight;
-</span><span class="code-s">}
+	</span><span class="code-c">// Get initial support point in any direction
+	</span><span class="code-t">vec3 </span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">);
 </span></pre>
 			</div>
-		<p>To draw particles with the mouse, we can create some defaults in an Init function...</p>
+		<p>Now that we have one point, we can add it to the simplex and set the search direction towards the origin.</p>
 			<div class="article-code draw-left-line">
 				
 				<pre class="article-code-text cpp">
-</span><span class="code-t">Cell </span><span class="code-w">_EMPTY</span><span class="code-s">, </span><span class="code-w">_SAND</span><span class="code-s">, </span><span class="code-w">_WATER</span><span class="code-s">, </span><span class="code-w">_ROCK;
-	
-</span><span class="code-r">void </span><span class="code-f">Initialize</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{ 
-	</span><span class="code-w">_EMPTY </span><span class="code-s">= </span><span class="code-s">{
-		</span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">EMPTY</span><span class="code-s">,
-		</span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">NONE</span><span class="code-s">,
-		</span><span class="code-t">Color</span><span class="code-s">::</span><span class="code-f">From2</span><span class="code-d">55</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-c">// 0 alpha allows for a background
-	</span><span class="code-s">};
-	
-	</span><span class="code-w">_SAND </span><span class="code-s">= </span><span class="code-s">{
-		</span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">SAND</span><span class="code-s">,
-		</span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN </span><span class="code-s">| </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN_SIDE</span><span class="code-s">,
-		</span><span class="code-t">Color</span><span class="code-s">::</span><span class="code-f">From2</span><span class="code-d">55</span><span class="code-s">(</span><span class="code-d">235</span><span class="code-s">, </span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">175</span><span class="code-s">)
-	</span><span class="code-s">};
-	
-	</span><span class="code-w">_WATER </span><span class="code-s">= </span><span class="code-s">{
-		</span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">WATER</span><span class="code-s">,
-		</span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_DOWN </span><span class="code-s">| </span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">MOVE_SIDE</span><span class="code-s">,
-		</span><span class="code-t">Color</span><span class="code-s">::</span><span class="code-f">From2</span><span class="code-d">55</span><span class="code-s">(</span><span class="code-d">175</span><span class="code-s">, </span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">235</span><span class="code-s">)
-	</span><span class="code-s">};
-	
-	</span><span class="code-w">_ROCK </span><span class="code-s">= </span><span class="code-s">{
-		</span><span class="code-t">CellType</span><span class="code-s">::</span><span class="code-d">ROCK</span><span class="code-s">,
-		</span><span class="code-t">CellProperties</span><span class="code-s">::</span><span class="code-d">NONE</span><span class="code-s">,
-		</span><span class="code-t">Color</span><span class="code-s">::</span><span class="code-f">From2</span><span class="code-d">55</span><span class="code-s">(</span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">200</span><span class="code-s">)
-	</span><span class="code-s">};
-	
-	</span><span class="code-c">// Init a texture for sand...
-</span><span class="code-s">}
+	</span><span class="code-c">// Simplex is an array of points, max count is 4
+	</span><span class="code-f">Simplex </span><span class="code-v">points;
+	</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+
+	</span><span class="code-c">// New direction is towards the origin
+	</span><span class="code-t">vec3 </span><span class="code-v">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">support;
 </span></pre>
 			</div>
-		<p>Then at the top of our update function, we'll add these lines.</p>
+		<p>In a loop, we'll add another point. The exit condition is that this new point is not in front of the search direction. This would exit if the direction finds a vertex that was already the furthest one along it.</p>
 			<div class="article-code draw-left-line">
 				
 				<pre class="article-code-text cpp">
-</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Mouse</span><span class="code-s">::</span><span class="code-f">ButtonDown</span><span class="code-s">(</span><span class="code-d">LMOUSE</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-t">vector2 </span><span class="code-v">pos </span><span class="code-s">= </span><span class="code-t">Mouse</span><span class="code-s">::</span><span class="code-f">ScreenPos</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_scale;
-		</span><span class="code-v">pos</span><span class="code-s">.</span><span class="code-w">y </span><span class="code-s">= </span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-w">m_height </span><span class="code-s">- </span><span class="code-v">pos</span><span class="code-s">.</span><span class="code-w">y;
+	</span><span class="code-j">while </span><span class="code-s">(</span><span class="code-r">true</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">);
+ 
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">) </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">false; </span><span class="code-c">// no collision
+		</span><span class="code-s">}
 
-		</span><span class="code-t">Cell </span><span class="code-v">placeMe </span><span class="code-s">= _EMPTY;
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">S</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-v">placeMe </span><span class="code-s">= </span><span class="code-w">_SAND;
-		</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">W</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-v">placeMe </span><span class="code-s">= </span><span class="code-w">_WATER;
-		</span><span class="code-j">else </span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">R</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-v">placeMe </span><span class="code-s">= </span><span class="code-w">_ROCK;
-
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-v">pos</span><span class="code-s">.</span><span class="code-w">x; </span><span class="code-v">x </span><span class="code-s">&lt </span><span class="code-v">pos</span><span class="code-s">.</span><span class="code-w">x </span><span class="code-s">+ </span><span class="code-d">20; </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-v">pos</span><span class="code-s">.</span><span class="code-w">y; </span><span class="code-v">y </span><span class="code-s">&lt </span><span class="code-v">pos</span><span class="code-s">.</span><span class="code-w">y </span><span class="code-s">+ </span><span class="code-d">20; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) 
-		</span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">!</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">)</span><span class="code-s">) 
-				</span><span class="code-j">continue;
-			
-			</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-v">placeMe</span><span class="code-s">);
+		</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+</span></pre>
+			</div>
+		<p>Now that we have a line, we'll feed it into a function that updates the simplex and search direction. It'll return true or false to signify a collision.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">true;
 		</span><span class="code-s">}
 	</span><span class="code-s">}
-
-	</span><span class="code-c">// Update cells
-	</span><span class="code-c">// Copy sand colors to a texture
-	</span><span class="code-c">// Draw the texture on the screen
 </span><span class="code-s">}
 </span></pre>
 			</div>
-		<p>The last thing I want to cover is about making games inside of these simulations. Let's think about the most basic feature we need, then in future posts I'll expand on this.</p><p>Having a player that moves around seems like a good place to start, so let's think about how that might work. We'll need some notion of a group of particles that can move together. Let's make a Tile struct that holds a list of positions for its particles, and a position for the group itself. For now, we'll just use the _ROCK particle for everything in the tile.</p>
+		<p>That's all for the main loop. It's dead simple in the world of algorithms, but the real work is in the NextSimplex function. We need a series of different checks for each shape of simplex to see what the new simplex should be and what direction we'll search in next.</p><p>The NextSimplex function will act as a dispatcher to three other functions, one for each shape.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Tile.h</p>
+				<p class="article-code-file mark-section">GJK.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">Tile </span><span class="code-s">{
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt</span><span class="code-s">&gt </span><span class="code-w">Positions;
-	</span><span class="code-r">int </span><span class="code-w">X </span><span class="code-s">= </span><span class="code-d">0;
-	</span><span class="code-r">int </span><span class="code-w">Y </span><span class="code-s">= </span><span class="code-d">0;
-</span><span class="code-s">};
+</span><span class="code-r">bool </span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-j">switch </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">case </span><span class="code-d">2</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Line       </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-j">case </span><span class="code-d">3</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Triangle   </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-j">case </span><span class="code-d">4</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-c">// never should be here
+	</span><span class="code-j">return </span><span class="code-r">false;
+</span><span class="code-s">}
 </span></pre>
 			</div>
-		<p>Before we update the world, we need to paste the tile particles in, so let's put these lines in the Update function before the main loops. After we've called CommitCells and updated the texture, we can remove the tiles by setting their cells to _EMPTY.</p>
+		<p>We can add one more helper function to help lessen the headache from these next functions.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Main.cpp</p>
+				
 				<pre class="article-code-text cpp">
-</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Tile</span><span class="code-s">&gt </span><span class="code-w">m_tiles;
+</span><span class="code-r">bool </span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">ao</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-j">return </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-a">ao</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>We'll start with the line case. There are three possible regions that the origin could be in, but realistically only two. We started with point B, and searched in the direction of A, which means that the origin cannot be in the red region. This leaves us with one check between the vector AB and AO. If AO is inside the green region, we move on. If AO is in the blue region, we'll come back to the line case, but B will be replaced.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
 
-</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-c">// Draw cells with mouse
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">);
+	</span><span class="code-s">}
 
-	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Tile</span><span class="code-s">& </span><span class="code-v">tile </span><span class="code-s">: </span><span class="code-w">m_tiles</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">] </span><span class="code-s">: </span><span class="code-v">tile</span><span class="code-s">.</span><span class="code-w">Positions</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-v">x </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-v">tile</span><span class="code-s">.</span><span class="code-w">X;
-			</span><span class="code-v">y </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-v">tile</span><span class="code-s">.</span><span class="code-w">Y;
+	</span><span class="code-j">else </span><span class="code-s">{
+		</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a </span><span class="code-s">};
+		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">ao;
+	</span><span class="code-s">}
 
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-				</span><span class="code-c">// what happens if the cell is already full?
-				</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-w">_ROCK</span><span class="code-s">);
+	</span><span class="code-j">return </span><span class="code-r">false;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<img class="article-embed" src="../articles/gjk-algorithm/line.jpg"></img><p>In this case, AO is in the same direction as AB, so we know it's in the green region. We'll set the search direction pointing towards the origin and move on. In 2D, you would not need to use cross products, but in 3D the origin could be anywhere in a cylinder around the line, so we need them to get the correct direction.</p><p>The triangle case has seven regions, but again we can cull out some impossibilities. Yellow, red, and purple cannot have the origin because the new point we added was A, meaning that the origin cannot be in the direction of the BC face. That leaves us with four regions we need to check.</p><p>If the origin is outside the triangle on the AC face, we'll check if it's also in the direction of AC. If it is, then we'll remove B from the simplex and move on, if not, we'll do a line case between AB. If the origin was not in the direction of the AC face, we'll check the AB face. If it's there, we'll do the same line case between AB. Finally, if both checks fail, we know it must be inside the triangle. In 2D we would be done and could return true, but in 3D we need to check if the origin is above or below the triangle and move on.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">];
+
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+ 
+	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">};
+			</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+		</span><span class="code-s">}
+
+		</span><span class="code-j">else </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">else </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">abc</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-s">}
+
+		</span><span class="code-j">else </span><span class="code-s">{
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">abc;
+			</span><span class="code-s">}
+
+			</span><span class="code-j">else </span><span class="code-s">{
+				</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">};
+				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">abc;
 			</span><span class="code-s">}
 		</span><span class="code-s">}
 	</span><span class="code-s">}
 
-	</span><span class="code-c">// Update cells
-	</span><span class="code-c">// Copy sand colors to a texture
-	</span><span class="code-c">// Draw the texture on the screen
+	</span><span class="code-j">return </span><span class="code-r">false;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<img class="article-embed" src="../articles/gjk-algorithm/triangle.jpg"></img><p>The tetrahedron case is the most complex, but almost entirely made up of triangle cases. We don't need to test for the origin below the tetrahedron for the same reason as before. We only need to determine which face, if any, the origin is in the direction of. If there is one, we'll go back to the triangle case with that face as the simplex, but if not, we know it must be inside the tetrahedron and we'll return true.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">d </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">3</span><span class="code-s">];
 
-	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Tile</span><span class="code-s">& </span><span class="code-v">tile </span><span class="code-s">: </span><span class="code-w">m_tiles</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">] </span><span class="code-s">: </span><span class="code-v">tile</span><span class="code-s">.</span><span class="code-w">Positions</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-v">x </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-v">tile</span><span class="code-s">.</span><span class="code-w">X;
-			</span><span class="code-v">y </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-v">tile</span><span class="code-s">.</span><span class="code-w">Y;
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">InBounds</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-				</span><span class="code-c">// what happens if the cell is no longer part of the tile?
-				</span><span class="code-w">m_world</span><span class="code-s">.</span><span class="code-f">SetCell</span><span class="code-s">(</span><span class="code-v">x</span><span class="code-s">, </span><span class="code-v">y</span><span class="code-s">, </span><span class="code-w">_EMPTY</span><span class="code-s">);
-			</span><span class="code-s">}
-		</span><span class="code-s">}
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ad </span><span class="code-s">= </span><span class="code-v">d </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+ 
+	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">acd </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ad</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">adb </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ad</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">);
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
 	</span><span class="code-s">}
+		
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">acd</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">d </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">adb</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">d</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">return </span><span class="code-r">true;
 </span><span class="code-s">}
 </span></pre>
 			</div>
-		<p>Finally, we can make a little ship and add some basic movement. In the Init function, we'll make a Tile and add it to the list.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">void </span><span class="code-f">Initialize</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{ 
-	</span><span class="code-t">Tile </span><span class="code-v">ship </span><span class="code-s">= </span><span class="code-s">{
-		</span><span class="code-s">{
-					    </span><span class="code-s">{</span><span class="code-d">2</span><span class="code-s">,</span><span class="code-d">6</span><span class="code-s">}</span><span class="code-s">,
-				  </span><span class="code-s">{</span><span class="code-d">1</span><span class="code-s">,</span><span class="code-d">5</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">2</span><span class="code-s">,</span><span class="code-d">5</span><span class="code-s">}</span><span class="code-s">, 
-			</span><span class="code-s">{</span><span class="code-d">0</span><span class="code-s">,</span><span class="code-d">4</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">1</span><span class="code-s">,</span><span class="code-d">4</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">2</span><span class="code-s">,</span><span class="code-d">4</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">3</span><span class="code-s">,</span><span class="code-d">4</span><span class="code-s">}</span><span class="code-s">,
-			</span><span class="code-s">{</span><span class="code-d">0</span><span class="code-s">,</span><span class="code-d">3</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">1</span><span class="code-s">,</span><span class="code-d">3</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">2</span><span class="code-s">,</span><span class="code-d">3</span><span class="code-s">}</span><span class="code-s">, </span><span class="code-s">{</span><span class="code-d">3</span><span class="code-s">,</span><span class="code-d">3</span><span class="code-s">}</span><span class="code-s">,
-			</span><span class="code-s">{</span><span class="code-d">0</span><span class="code-s">,</span><span class="code-d">2</span><span class="code-s">}</span><span class="code-s">,               </span><span class="code-s">{</span><span class="code-d">3</span><span class="code-s">,</span><span class="code-d">2</span><span class="code-s">}</span><span class="code-s">,
-			</span><span class="code-s">{</span><span class="code-d">0</span><span class="code-s">,</span><span class="code-d">1</span><span class="code-s">}</span><span class="code-s">,               </span><span class="code-s">{</span><span class="code-d">3</span><span class="code-s">,</span><span class="code-d">1</span><span class="code-s">}</span><span class="code-s">,
-			</span><span class="code-s">{</span><span class="code-d">0</span><span class="code-s">,</span><span class="code-d">0</span><span class="code-s">}</span><span class="code-s">,               </span><span class="code-s">{</span><span class="code-d">3</span><span class="code-s">,</span><span class="code-d">0</span><span class="code-s">}</span><span class="code-s">,
-		</span><span class="code-s">}</span><span class="code-s">,
-		</span><span class="code-d">200</span><span class="code-s">, </span><span class="code-d">200
-	</span><span class="code-s">};
-
-	</span><span class="code-w">m_tiles</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">ship</span><span class="code-s">);
-
-	</span><span class="code-c">// Create default cells
-	</span><span class="code-c">// Init a texture for sand...
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>In the Update function, before the world updates, we can add these lines to move our ship. It's important to move the tiles before pasting them in so they can be removed correctly at the end.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-c">// Draw cells with mouse
-
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">LEFT</span><span class="code-s">)</span><span class="code-s">)  </span><span class="code-w">m_tiles</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">X </span><span class="code-s">-</span><span class="code-s">= </span><span class="code-d">1;
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">RIGHT</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-w">m_tiles</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">X </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1;
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">UP</span><span class="code-s">)</span><span class="code-s">)    </span><span class="code-w">m_tiles</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">Y </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1;
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-t">Keyboard</span><span class="code-s">::</span><span class="code-f">KeyDown</span><span class="code-s">(</span><span class="code-d">DOWN</span><span class="code-s">)</span><span class="code-s">)  </span><span class="code-w">m_tiles</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">Y </span><span class="code-s">-</span><span class="code-s">= </span><span class="code-d">1;
-
-	</span><span class="code-c">// Paste tiles
-	</span><span class="code-c">// Update cells
-	</span><span class="code-c">// Copy sand colors to a texture
-	</span><span class="code-c">// Draw the texture on the screen
-	</span><span class="code-c">// Remove tiles
-</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>And that about covers it, we're left with a decently quick simulation. On my computer this runs between 0.005 - .015 seconds per frame. Which is around 200 - 60 fps. Currently we can only use 1 thread, so if your computer has 4 cores we are only using 1/4th or more likely only 1/8th of its power :(</p>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/_r8p1FOH9j0.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_r8p1FOH9j0?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		<p>In the next post, I am going to cover how we could make the world bigger, and how multi-threading the simulation works. Then we'll make a game with it, so stay tuned if this seems interesting!</p>
+		<img class="article-embed" src="../articles/gjk-algorithm/tetrahedron.jpg"></img><p>With that final case, we have completed the GJK algorithm. As you can see it is not that complex looking at it from a geometric point of view. This algorithm only gives you a yes/no answer about a collision, so you cannot respond to it. In the next article I will cover an algorithm that uses the simplex and similar principles to find the collision normal then maybe get into rotational physics. Thanks for reading!</p><p>Here is a demo that will let you play around with the algorithm and let you inspect each iteration, here's the <a class="underline" target="_blank" href="../articles/gjk-algorithm/app/demo.html">full version</a> if you want a better look...</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/demo.html"></iframe>
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://comments.winter.dev&subject=falling-sand"></iframe>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://comments.winter.dev&subject=gjk-algorithm"></iframe>
 				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
