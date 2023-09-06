@@ -1,7 +1,7 @@
 <html lang="en">
 
 <head>
-	<title>Another way of programming, taking it slow</title>
+	<title>EPA: Collision response algorithm for 2D/3D</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="icon" type="image/x-icon" href="../favicon.ico">
 	<link rel="stylesheet" href="../styles/global.css" />
@@ -40,46 +40,357 @@
 		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
-			<h1 class="page-title">Another way of programming, taking it slow</h1><p>Whenever I sit down to write some code, I always get an itch to finish whatever problem is staring me in the face right at that moment. Over the last 2 years, I've realized that if you can afford to tackle a problem over a long period of time, you should absolutely go for that option.</p><p>There are major benefits that arise from this approach. The final code ends up more developed than what you would have been capable of writing at the beginning. You end up spending less time on the actual problem, because you only work on it when you have a good idea. And, after sitting with it for so long there's a good chance that even if not fully correct, it will still move you in the right direction. Taking it slow leads to an aha moment in the future along with the insight required to solve the problem.</p><p>I was inspired to write this article from an extreme example in my own code around making a prefab class for my entity system. When I first wrote the class, I had the intention to create it right then and there, but quickly realized I didn't have the knowledge to do so. It required doing type specific operations on generic pointers, with no types!</p>
-			<h2 class="article-subtitle mark-section" id=A>
-				A quick overview of an entity system & the root of the problem
-				<a class="article-subtitle-id-link" href="#A">#</a>
+			<h1 class="page-title">EPA: Collision response algorithm for 2D/3D</h1><p>Last time we looked at an algorithm for testing collisions between two convex polygons called GJK. It's a useful algorithm for sure, but it doesn't give us enough information to respond to the collisions it detects. In this article I'll describe an extension that allows us to find the correct normal and depth of the collisions. This extension provides the information that the solvers need to resolve a collision as I demonstrated in my original physics engine <a class="underline" target="_blank" href="/articles/physics-engine#collision-response">article</a>.</p><p>I call this algorithm an extension because its input is the internal state from GJK. If you recall, we were working with a simplex to try and surround the origin with a triangle in 2D or a tetrahedron in 3D. This algorithm takes the final simplex that contained the origin and finds the normal of collision, aka the shortest vector to nudge the shapes out of each other. The naive solution is to use the normal of the closest face to the origin, but remember, a simplex does not need to contain any of the original polygon's faces, so we could end up with an incorrect normal.</p><p>Let's jump into it, it's called the Expanding Polytope Algorithm because it expands the simplex by adding vertices to it until we find the shortest normal from a face that is on the original polygon. For jargon's sake, a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> becomes a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Polytope">polytope</a> after we begin adding more vertices to it. How do we do that? Well we already have the tools from GJK, all we need to do is iterate over the faces and find the closest one. Then we'll use the Support function to find if there is a point  further in the direction of that normal. If there is one, the face of the polytope must be inside the original polygon and can be expanded. If so, we'll add this supporting point and repeat.</p><p>In 2D this is easy, we can just add the point and the edges remain intact. In 3D we need to do a little repair job, which is where most of the annoyance comes from. Let's start with the 2D version first, because it shows the algorithm's main pieces, then we'll see how to repair the 3D polytope.</p>
+			<h2 class="article-subtitle mark-section" id=2D>
+				2D in Javascript
+				<a class="article-subtitle-id-link" href="#2D">#</a>
 			</h2>
-		<p>Entities are made from sets of components. Components are made up of data. Ideally, they would be Plain Old Data classes, but more complex components that store data in dynamic memory are eventually required. This could be in the form of lists, maps, or things like shared pointers.</p><p>When copying a class in C++ we make use of the copy constructor, which takes care of these special cases by calling the copy constructors of the underlying containers, resulting in a deep copy.</p><p>Prefabs need to store a list of components and their respected data to spawn an entity in the future. The only way to store multiple types in a single list is to use generic void pointers. There is a fundamental problem that comes up frequently when using this practice; because of the use of voids, we dropped all knowledge of what type of data we are pointing to. When it comes time to spawn the entity, each component's data needs to be copied into the entity system, but without type information there is no way to know which copy constructor to call, so we can't make deep copies.</p>
-			<h2 class="article-subtitle mark-section" id=The>
-				The process
-				<a class="article-subtitle-id-link" href="#The">#</a>
-			</h2>
-		<p>I took the first stab at my prefab class in February, but only completed it a couple days ago in June! This was a non-critical, time saver class, so I could afford not to worry about it for several months while working on other stuff. I'm glad I waited though because it opened my mind to this new way of thinking.</p><p>I made the first real attempt in early June but was stopped yet again by a lack of type information. The prefab needed to store void*s in a list and copy them into other void*s in the entity system. The simplest way to do this is with a memcpy which works great for POD classes, but when a component requires a deep copy, it will miss most of the real data. Components that make use of containers or inheritance don't get copied correctly because most of the data is behind pointers.</p><p>I got stuck at this point because it seemed impossible to get type information back from the void*s. I knew I was really close to having the solution, I just needed a way to deep copy void*s, but I couldn't think of any way of doing that, so I put it on pause again.</p><p>Cut to 3 weeks later; I was working on a bug in the physics engine where lambdas were not getting copied correctly and finally had that aha moment. Forget about copying lambdas, what if I could use lambdas to do the copying? In the entity system there is a Component class that stores metadata like the name and size. I could just add a lambda to it that would call the correct copy constructor. A lambda with a completely generic signature could get created in a template function and called whenever a component needs to get copied.</p><p>This solution requires that at some point you use a template function in the entity system. That's a fair price when the alternatives would require the user to create at least one more function for each component, or add to some list, etc. I love solutions that are completely behind the scenes. Why should the user need to worry about things this low level if all they are trying to do is spawn entities?</p><p>Here is the code that creates the lambda. When you register a component, it calls GetCopyFunc and gets the lambda that copies for that component type. This seems like a powerful concept that I want to explore further, the idea that you can call a template function once and store information from it in generic types, making it so there is no need to template further. You can see my attempt at this in the entity system in my engine.</p>
+		<p>I'm going to venture into a little <a class="underline" target="_blank" href="https://p5js.org/">p5.js</a> for the 2D version because I've made a small demo with it that you can check out in fullscreen <a class="underline" target="_blank" href="../articles/gjk-algorithm/app/demo.html">here</a>.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/demo.html"></iframe><p>We'll start with a function that takes in the simplex from GJK and the two shapes that we are testing.</p><p>The first step is to find the edge closest to the origin. We'll do this by comparing the dot products between their normals and the vectors from the origin. We only need the closest one, so we'll store it, along with its index and distance in variables, outside the loop to use later.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">TypeErasureCopy.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">using </span><span class="code-t">func_DeepCopy </span><span class="code-s">= </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">function</span><span class="code-s">&lt</span><span class="code-r">void</span><span class="code-s">(</span><span class="code-r">void</span><span class="code-s">*</span><span class="code-s">, </span><span class="code-r">void</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-s">&gt;
+				<p class="article-code-file mark-section">EPA.js</p>
+				<pre class="article-code-text javascript">
+</span><span class="code-r">function </span><span class="code-f">EPA</span><span class="code-s">(</span><span class="code-a">polytope</span><span class="code-s">, </span><span class="code-a">shapeA</span><span class="code-s">, </span><span class="code-a">shapeB</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-r">let </span><span class="code-v">minIndex </span><span class="code-s">= </span><span class="code-d">0;
+	</span><span class="code-r">let </span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-r">Infinity;
+	</span><span class="code-r">let </span><span class="code-v">minNormal;
 
-</span><span class="code-r">struct </span><span class="code-t">Component </span><span class="code-s">{
-	</span><span class="code-s">.</span><span class="code-s">.</span><span class="code-s">.
-	</span><span class="code-t">func_DeepCopy </span><span class="code-w">DeepCopyFunc;
-	</span><span class="code-s">.</span><span class="code-s">.</span><span class="code-s">.
-</span><span class="code-s">};
+	</span><span class="code-j">while </span><span class="code-s">(</span><span class="code-v">minDistance </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-r">Infinity</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">let </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-a">polytope</span><span class="code-s">.</span><span class="code-w">length; </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-r">let </span><span class="code-v">j </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-v">i </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">) % </span><span class="code-a">polytope</span><span class="code-s">.</span><span class="code-w">length;
 
-</span><span class="code-r">template</span><span class="code-s">&lt</span><span class="code-r">typename </span><span class="code-t">_t</span><span class="code-s">&gt
-</span><span class="code-t">func_DeepCopy </span><span class="code-f">GetCopyFunc</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-	</span><span class="code-j">return </span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">void</span><span class="code-s">* </span><span class="code-a">ptr</span><span class="code-s">, </span><span class="code-r">void</span><span class="code-s">* </span><span class="code-a">data</span><span class="code-s">) 
-	</span><span class="code-s">{
-		</span><span class="code-t">_t</span><span class="code-s">* </span><span class="code-v">p </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-t">_t</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-a">ptr;
-		</span><span class="code-t">_t</span><span class="code-s">* </span><span class="code-v">d </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-t">_t</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-a">data;
+			</span><span class="code-r">let </span><span class="code-v">vertexI </span><span class="code-s">= </span><span class="code-a">polytope</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-f">copy</span><span class="code-s">(</span><span class="code-s">);
+			</span><span class="code-r">let </span><span class="code-v">vertexJ </span><span class="code-s">= </span><span class="code-a">polytope</span><span class="code-s">[</span><span class="code-v">j</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-f">copy</span><span class="code-s">(</span><span class="code-s">);
 
-		</span><span class="code-s">*</span><span class="code-v">p </span><span class="code-s">= </span><span class="code-s">*</span><span class="code-v">d; </span><span class="code-c">// call copy constructor
-	</span><span class="code-s">};
+			</span><span class="code-r">let </span><span class="code-v">ij </span><span class="code-s">= </span><span class="code-v">vertexJ</span><span class="code-s">.</span><span class="code-f">sub</span><span class="code-s">(</span><span class="code-v">vertexI</span><span class="code-s">);
+
+			</span><span class="code-r">let </span><span class="code-v">normal </span><span class="code-s">= </span><span class="code-f">createVector</span><span class="code-s">(</span><span class="code-v">ij</span><span class="code-s">.</span><span class="code-w">y</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-v">ij</span><span class="code-s">.</span><span class="code-w">x</span><span class="code-s">)</span><span class="code-s">.</span><span class="code-f">normalize</span><span class="code-s">(</span><span class="code-s">);
+			</span><span class="code-r">let </span><span class="code-v">distance </span><span class="code-s">= </span><span class="code-v">normal</span><span class="code-s">.</span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">vertexI</span><span class="code-s">);
+
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&lt </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-v">distance </span><span class="code-s">*</span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;
+				</span><span class="code-v">normal</span><span class="code-s">.</span><span class="code-f">mult</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">);
+			</span><span class="code-s">}
+
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&lt </span><span class="code-v">minDistance</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-v">distance;
+				</span><span class="code-v">minNormal </span><span class="code-s">= </span><span class="code-v">normal;
+				</span><span class="code-v">minIndex </span><span class="code-s">= </span><span class="code-v">j;
+			</span><span class="code-s">}
+		</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Finding the normal of a vector in 2D is done by swapping the X and Y components and flipping one of their signs. The handedness, either right or left, depends on which component gets flipped. Depending on the winding order, the handedness that results in an outward facing normal changes, so it's common to add a check to flip it if it's wrong.</p><div class="article-embed article-embed-no-height-limit"><svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 272.67 119.38" style="fill: var(--text-color);">
+	<defs>
+		<style>
+			.cls-1 {
+				fill: none;
+				stroke: var(--text-color);
+				stroke-miterlimit: 10;
+				stroke-dasharray: 0 5 0;
+			}
+
+			.cls-10 {
+				fill: none;
+				stroke: var(--text-color);
+				stroke-miterlimit: 10;
+			}
+
+			.cls-2 {
+				font-weight: 100;
+			}
+
+			.cls-3 {
+				font-weight: 100;
+				font-size: 12px;
+			}
+
+			.cls-3,.cls-8 {
+				font-family: sans-serif;
+			}
+
+			.cls-4,.cls-5,.cls-6 {
+				text-decoration:underline;
+			}
+
+			.cls-5 {
+				letter-spacing:-0.01em;
+			}
+
+			.cls-6 {
+				letter-spacing:-0.04em;
+			}
+
+			.cls-7 {
+				letter-spacing:-0.03em;
+			}
+
+			.cls-8 {
+				font-size: 10px;
+				stroke: none;
+				font-weight: 100;
+			}
+
+			.cls-9 {
+				letter-spacing:-0.03em;
+			}
+		</style>
+	</defs>
+	<g id="Winding" class="hidden">
+		<line class="cls-10" x1="149.31" y1="47.7" x2="166.98" y2="12"></line>
+		<line class="cls-10" x1="208.45" y1="21.01" x2="166.98" y2="12"></line>
+		<line class="cls-10" x1="204.48" y1="81.23" x2="208.45" y2="21.01"></line>
+		<line class="cls-10" x1="149.31" y1="47.7" x2="204.48" y2="81.23"></line>
+		<circle class="cls-2" cx="204.48" cy="81.23" r="1.63"></circle>
+		<circle class="cls-2" cx="149.31" cy="47.7" r="1.63"></circle>
+		<circle class="cls-2" cx="166.98" cy="12" r="1.63"></circle>
+		<circle class="cls-2" cx="208.45" cy="21.01" r="1.63"></circle>
+		<text class="cls-3" transform="translate(206.12 79.6)">0</text>
+		<text class="cls-3" transform="translate(210.08 19.38)">1</text>
+		<text class="cls-3" transform="translate(168.61 10.36)">2</text>
+		<text class="cls-3" transform="translate(140.96 46.06)">3</text>
+		<text class="cls-3" transform="translate(122.55 100.36)">
+			<tspan class="cls-4">Clockwise</tspan>
+			<tspan x="57.82" y="0" xml:space="preserve"> vs. </tspan>
+			<tspan class="cls-4" x="80.83" y="0">Counter-Cw</tspan>
+			<tspan x="0" y="14.4" xml:space="preserve">  </tspan>
+			<tspan class="cls-7" x="6.75" y="14.4">3</tspan>
+			<tspan x="13.98" y="14.4" xml:space="preserve">, 2, 1, 0           0, 1, 2, 3</tspan>
+		</text>
+	</g>
+	<g id="Vector2" class="hidden">
+		<line class="cls-1" x1="29.47" y1="61.32" x2="2.15" y2="14"></line>
+		<polygon points="5.18 13.26 0 10.27 0 16.25 5.18 13.26"></polygon>
+		<line class="cls-1" x1="29.47" y1="61.32" x2="56.79" y2="108.64"></line>
+		<polygon points="53.77 109.37 58.95 112.36 58.95 106.38 53.77 109.37"></polygon>
+		<text class="cls-8" transform="translate(8 10.27)">(<tspan class="cls-9" x="4.04" y="0">-</tspan><tspan
+				x="8.8" y="0">2, 4)</tspan></text>
+		<text class="cls-8" transform="translate(58.95 112.36)">(2, -4)</text>
+	</g>
+	<g id="Vector1" class="hidden">
+		<line class="cls-10" x1="29.47" y1="61.32" x2="76.79" y2="34"></line>
+		<polygon points="77.53 37.02 80.52 31.84 74.54 31.84 77.53 37.02"></polygon>
+		<text class="cls-8" transform="translate(80.52 31.84)">(<tspan class="cls-9" x="4.04" y="0">
+			4</tspan><tspan x="10.82" y="0">, 2)</tspan></text>
+		<circle class="cls-2" cx="29.47" cy="61.32" r="1.63"></circle>
+	</g>
+</svg></div><p>Once we have this normal, we can use the Support function to test for a point further out in its direction. If there is one, we'll insert the support point between the vertices in the polytope and repeat. If there isn't one, we know we have found the actual closest normal and can return it. Adding a small amount to the distance is useful to stop repeat collisions that would have moved the shapes an even smaller distance.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text javascript">
+		</span><span class="code-r">let </span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">support</span><span class="code-s">(</span><span class="code-a">shapeA</span><span class="code-s">, </span><span class="code-a">shapeB</span><span class="code-s">, </span><span class="code-v">minNormal</span><span class="code-s">);
+		</span><span class="code-r">let </span><span class="code-v">sDistance </span><span class="code-s">= </span><span class="code-v">minNormal</span><span class="code-s">.</span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">abs</span><span class="code-s">(</span><span class="code-v">sDistance </span><span class="code-s">- </span><span class="code-v">minDistance</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0</span><span class="code-s">.</span><span class="code-d">001</span><span class="code-s">) </span><span class="code-s">{
+		 	</span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-r">Infinity;
+			</span><span class="code-v">polytope</span><span class="code-s">.</span><span class="code-f">splice</span><span class="code-s">(</span><span class="code-v">minIndex</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-v">support</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+
+	</span><span class="code-r">return </span><span class="code-v">minNormal</span><span class="code-s">.</span><span class="code-f">mult</span><span class="code-s">(</span><span class="code-v">minDistance </span><span class="code-s">+ </span><span class="code-d">0</span><span class="code-s">.</span><span class="code-d">001</span><span class="code-s">);
 </span><span class="code-s">}
 </span></pre>
 			</div>
-		<p>Even though this prefab system took 5 months, I only spent around an hour or so on it. I think that the result is much better than anything that I could have written months ago. Because I had to live without a prefab system for so long, I got a good idea for what it really needed to do, instead of wanting a prefab system because it's cool and guessing at the use cases. I also avoided doing any research apart from a single google search for how to make that lambda above that landed me at <a class="underline" target="_blank" href="https://stackoverflow.com/a/40293164/6772365">stackoverflow</a>, which shows some other constructors.</p><p>I think that this style of coding is very powerful, and I want to try and use it in other places in my code more frequently. It seems hard to do though because you need something to work at some point, so I guess I'll leave it to future aha'ed me to see if it works..</p>
+		<p>That's it for the 2D version. Now that we've looked at the core of this algorithm, we can make the jump to 3D. The main difference between the two is that in 2D the edges are implied by the order of the vertices, but in 3D we need to explicitly define the faces because each vertex is shared between three or more faces.</p>
+			<h2 class="article-subtitle mark-section" id=3D>
+				3D in C++
+				<a class="article-subtitle-id-link" href="#3D">#</a>
+			</h2>
+		
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">EPA.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-t">CollisionPoints </span><span class="code-f">EPA</span><span class="code-s">(
+	</span><span class="code-r">const </span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">simplex</span><span class="code-s">, 
+	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, 
+	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">)
+</span><span class="code-s">{
+</span></pre>
+			</div>
+		<p>In 3D we need to keep track of every face. I've seen some different techniques, but the most straightforward in my opinion is to treat it like a mesh and use an index. We'll start with the polytope like we did in the 2D case, but now we'll also store the faces in a separate list. The most common way to do this is to treat every three indices as a triangle.</p><p>This index makes it easy to calculate the normal once per face, instead of with every iteration like in the 2D version, so let's split that into its own function so we can calculate them before we start.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-v">polytope</span><span class="code-s">(</span><span class="code-a">simplex</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-a">simplex</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">);
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">&gt </span><span class="code-v">faces </span><span class="code-s">= </span><span class="code-s">{
+		</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">,
+		</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">,
+		</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">,
+		</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">, </span><span class="code-d">2
+	</span><span class="code-s">};
+
+	</span><span class="code-c">// list: vec4(normal, distance), index: min distance
+	</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">normals</span><span class="code-s">, </span><span class="code-v">minFace</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-f">GetFaceNormals</span><span class="code-s">(</span><span class="code-v">polytope</span><span class="code-s">, </span><span class="code-v">faces</span><span class="code-s">);
+</span></pre>
+			</div>
+		<p>We'll add the same main loop from before.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+	</span><span class="code-t">vec3  </span><span class="code-v">minNormal;
+	</span><span class="code-r">float </span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-p">FLT_MAX;
+	
+	</span><span class="code-j">while </span><span class="code-s">(</span><span class="code-v">minDistance </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-p">FLT_MAX</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">minNormal   </span><span class="code-s">= </span><span class="code-v">normals</span><span class="code-s">[</span><span class="code-v">minFace</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-f">xyz</span><span class="code-s">(</span><span class="code-s">);
+		</span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-v">normals</span><span class="code-s">[</span><span class="code-v">minFace</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">w;
+ 
+		</span><span class="code-t">vec3 </span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-v">minNormal</span><span class="code-s">);
+		</span><span class="code-r">float </span><span class="code-v">sDistance </span><span class="code-s">= </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">minNormal</span><span class="code-s">, </span><span class="code-v">support</span><span class="code-s">);
+ 
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">abs</span><span class="code-s">(</span><span class="code-v">sDistance </span><span class="code-s">- </span><span class="code-v">minDistance</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0</span><span class="code-s">.</span><span class="code-d">001f</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-p">FLT_MAX;
+</span></pre>
+			</div>
+		<p>When expanding the polytope in 3D, we cannot just add a vertex, we need to repair the faces as well. You would think that removing the face and adding three more would be enough, but when two faces result in the same support point being added, duplicate faces end up inside the polytope and cause incorrect results. The solution is to remove not just the current face, but every face that is pointing in the direction of the support point. To repair it afterwards, we'll keep track of the unique edges and use those along with the support point's index to make new faces.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">&gt </span><span class="code-v">uniqueEdges;
+
+			</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">normals</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-v">support</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+					</span><span class="code-t">size_t f </span><span class="code-s">= </span><span class="code-v">i </span><span class="code-s">* </span><span class="code-d">3;
+
+					</span><span class="code-f">AddIfUniqueEdge</span><span class="code-s">(</span><span class="code-v">uniqueEdges</span><span class="code-s">, </span><span class="code-v">faces</span><span class="code-s">, </span><span class="code-v">f</span><span class="code-s">,     </span><span class="code-v">f </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">);
+					</span><span class="code-f">AddIfUniqueEdge</span><span class="code-s">(</span><span class="code-v">uniqueEdges</span><span class="code-s">, </span><span class="code-v">faces</span><span class="code-s">, </span><span class="code-v">f </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-v">f </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">);
+					</span><span class="code-f">AddIfUniqueEdge</span><span class="code-s">(</span><span class="code-v">uniqueEdges</span><span class="code-s">, </span><span class="code-v">faces</span><span class="code-s">, </span><span class="code-v">f </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-v">f    </span><span class="code-s">);
+
+					</span><span class="code-v">faces</span><span class="code-s">[</span><span class="code-v">f </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">faces</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">faces</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
+					</span><span class="code-v">faces</span><span class="code-s">[</span><span class="code-v">f </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">faces</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">faces</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
+					</span><span class="code-v">faces</span><span class="code-s">[</span><span class="code-v">f    </span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">faces</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">faces</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
+
+					</span><span class="code-v">normals</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">back</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-c">// pop-erase
+					</span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">pop_back</span><span class="code-s">(</span><span class="code-s">);
+
+					</span><span class="code-v">i</span><span class="code-s">-</span><span class="code-s">-;
+				</span><span class="code-s">}
+			</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Now that we have a list of unique edges, we can add the new faces to a list and add the supporting point to the polytope. Storing the new faces in their own list allows us to calculate only the normals of these new faces.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+			</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">&gt </span><span class="code-v">newFaces;
+			</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">edgeIndex1</span><span class="code-s">, </span><span class="code-v">edgeIndex2</span><span class="code-s">] </span><span class="code-s">: </span><span class="code-v">uniqueEdges</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-v">newFaces</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">edgeIndex1</span><span class="code-s">);
+				</span><span class="code-v">newFaces</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">edgeIndex2</span><span class="code-s">);
+				</span><span class="code-v">newFaces</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">polytope</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">);
+			</span><span class="code-s">}
+			 
+			</span><span class="code-v">polytope</span><span class="code-s">.</span><span class="code-f">push_back</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+
+			</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">newNormals</span><span class="code-s">, </span><span class="code-v">newMinFace</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-f">GetFaceNormals</span><span class="code-s">(</span><span class="code-v">polytope</span><span class="code-s">, </span><span class="code-v">newFaces</span><span class="code-s">);
+</span></pre>
+			</div>
+		<p>After we calculate the new normals, we need to find the new closest face. To eke out a little bit more performance, we'll only iterate over the old normals, then we'll compare the closest one to the closest face of the new normals. Finally, we can add these new faces and normals to the end of their respective lists.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+			</span><span class="code-r">float </span><span class="code-v">oldMinDistance </span><span class="code-s">= </span><span class="code-p">FLT_MAX;
+			</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">normals</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">.w </span><span class="code-s">&lt </span><span class="code-v">oldMinDistance</span><span class="code-s">) </span><span class="code-s">{
+					</span><span class="code-v">oldMinDistance </span><span class="code-s">= </span><span class="code-v">normals</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">.</span><span class="code-w">w;
+					</span><span class="code-v">minFace </span><span class="code-s">= </span><span class="code-v">i;
+				</span><span class="code-s">}
+			</span><span class="code-s">}
+ 
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">newNormals</span><span class="code-s">[</span><span class="code-v">newMinFace</span><span class="code-s">]</span><span class="code-s">.w </span><span class="code-s">&lt </span><span class="code-v">oldMinDistance</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-v">minFace </span><span class="code-s">= </span><span class="code-v">newMinFace </span><span class="code-s">+ </span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">);
+			</span><span class="code-s">}
+ 
+			</span><span class="code-v">faces  </span><span class="code-s">.</span><span class="code-f">insert</span><span class="code-s">(</span><span class="code-v">faces  </span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">newFaces  </span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">newFaces  </span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">);
+			</span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">insert</span><span class="code-s">(</span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">newNormals</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">newNormals</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>Once a supporting point isn't found further from the closest face, we'll return that face's normal and its distance in a CollisionPoints.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+	</span><span class="code-t">CollisionPoints </span><span class="code-v">points;
+ 
+	</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">Normal </span><span class="code-s">= </span><span class="code-v">minNormal;
+	</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">PenetrationDepth </span><span class="code-s">= </span><span class="code-v">minDistance </span><span class="code-s">+ </span><span class="code-d">0</span><span class="code-s">.</span><span class="code-d">001f;
+	</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">HasCollision </span><span class="code-s">= </span><span class="code-r">true;
+ 
+	</span><span class="code-j">return </span><span class="code-v">points;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>That's it for the main piece of the algorithm.</p><p>Don't think I forgot about the helper functions...</p><p>GetFaceNormals is just a slightly more complex version of the loop from the 2D version. Instead of i and j, we now get three vertices by first looking up their index in the faces list. In 3D the normal is found by taking the cross product of the vectors between the face's vertices. The winding order is now controlled by the index, instead of where we put some negative sign. Even though it's well defined, we don't check when adding new faces, so we still need the check here. Determining the winding involves finding the normal so there is no reason to not have this check here.</p><p>I've chosen to pack the distance and normal into a single vec4 to keep the code shorter.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">EPA.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec4</span><span class="code-s">&gt</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">&gt </span><span class="code-f">GetFaceNormals</span><span class="code-s">(
+	</span><span class="code-r">const </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">polytope</span><span class="code-s">,
+	</span><span class="code-r">const </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">faces</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec4</span><span class="code-s">&gt </span><span class="code-v">normals;
+	</span><span class="code-t">size_t </span><span class="code-v">minTriangle </span><span class="code-s">= </span><span class="code-d">0;
+	</span><span class="code-r">float  </span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-p">FLT_MAX;
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">size_t </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-a">faces</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-v">i </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">3</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">polytope</span><span class="code-s">[</span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-v">i    </span><span class="code-s">]</span><span class="code-s">];
+		</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">polytope</span><span class="code-s">[</span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-v">i </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">];
+		</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">polytope</span><span class="code-s">[</span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-v">i </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">]</span><span class="code-s">];
+
+		</span><span class="code-t">vec3 </span><span class="code-v">normal </span><span class="code-s">= </span><span class="code-f">normalized</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">)</span><span class="code-s">);
+		</span><span class="code-r">float </span><span class="code-v">distance </span><span class="code-s">= </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">normal</span><span class="code-s">, </span><span class="code-v">a</span><span class="code-s">);
+
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&lt </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">normal   </span><span class="code-s">*</span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;
+			</span><span class="code-v">distance </span><span class="code-s">*</span><span class="code-s">= </span><span class="code-s">-</span><span class="code-d">1;
+		</span><span class="code-s">}
+
+		</span><span class="code-v">normals</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-v">normal</span><span class="code-s">, </span><span class="code-v">distance</span><span class="code-s">);
+
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&lt </span><span class="code-v">minDistance</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">minTriangle </span><span class="code-s">= </span><span class="code-v">i </span><span class="code-s">/ </span><span class="code-d">3;
+			</span><span class="code-v">minDistance </span><span class="code-s">= </span><span class="code-v">distance;
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+
+	</span><span class="code-j">return </span><span class="code-s">{ </span><span class="code-v">normals</span><span class="code-s">, </span><span class="code-v">minTriangle </span><span class="code-s">};
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>AddIfUniqueEdge tests if the reverse of an edge already exists in the list and if so, removes it. If you look at how the winding works out, if a neighboring face shares an edge, it will be in reverse order. Remember, we only want to store the edges that we are going to save because every edge gets removed first, then we repair.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">EPA.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">void </span><span class="code-f">AddIfUniqueEdge</span><span class="code-s">(
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">pair</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">, </span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">edges</span><span class="code-s">,
+	</span><span class="code-r">const </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">size_t</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">faces</span><span class="code-s">,
+	</span><span class="code-t">size_t </span><span class="code-a">a</span><span class="code-s">,
+	</span><span class="code-t">size_t </span><span class="code-a">b</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-r">auto </span><span class="code-v">reverse </span><span class="code-s">= </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">find</span><span class="code-s">(                       </span><span class="code-c">//      0--&lt--3
+		</span><span class="code-a">edges</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">,                              </span><span class="code-c">//     / \ B /   A: 2-0
+		</span><span class="code-a">edges</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">,                                </span><span class="code-c">//    / A \ /    B: 0-2
+		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">make_pair</span><span class="code-s">(</span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-a">b</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-a">a</span><span class="code-s">]</span><span class="code-s">) </span><span class="code-c">//   1--&gt--2
+	</span><span class="code-s">);
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">reverse </span><span class="code-s">!</span><span class="code-s">= </span><span class="code-a">edges</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-a">edges</span><span class="code-s">.</span><span class="code-f">erase</span><span class="code-s">(</span><span class="code-v">reverse</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">else </span><span class="code-s">{
+		</span><span class="code-a">edges</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-a">a</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-a">faces</span><span class="code-s">[</span><span class="code-a">b</span><span class="code-s">]</span><span class="code-s">);
+	</span><span class="code-s">}
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>That's it for this algorithm, this allows us to handle some interesting collisions in the physics engine.</p><p>Let's look at some demos!</p>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="../thumbnails/0XQ2FSz3EK8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0XQ2FSz3EK8?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://comments.winter.dev&subject=another-way"></iframe>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://comments.winter.dev&subject=epa-algorithm"></iframe>
 				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   

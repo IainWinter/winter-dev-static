@@ -1,7 +1,7 @@
 <html lang="en">
 
 <head>
-	<title>Designing a physics engine</title>
+	<title>GJK: Collision detection algorithm in 2D/3D</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link rel="icon" type="image/x-icon" href="../favicon.ico">
 	<link rel="stylesheet" href="../styles/global.css" />
@@ -40,722 +40,414 @@
 		<script src="../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
-			<h1 class="page-title">Designing a physics engine</h1><p>By coincidence, right when The Cherno announced his game engine series I was just starting to get going on my own engine. I couldn't wait to finally have a professional opinion on how to make one. With self-taught programming it's hard to not doubt yourself constantly, wondering if you are doing things right or just think you are.</p><p>Recently, he has been posting videos about huge aspects of his engine like physics and entity systems, which were what I really wanted to learn about by making myself, but he ended up using libraries instead of going through the internals! I am not against using libraries, but to use them for the fun stuff? I felt like it defeated the point of making a custom engine series.</p><p>There is an argument to be made about saving time, but this was the first C++ project that I was making and the goal from the start was to go through all the major pillars of an engine: input, graphics, physics, entities, and audio. I wanted to learn how those things worked along with C++ and code design in general.</p><p>I bet that some other people are interested in the details of how these systems work, and I want to learn how to explain code better, so I am going to try and make some videos going over the internals of these systems. They end up being much simpler than at first glance.</p>
-			<h2 class="article-subtitle mark-section" id=Let's>
-				Let's start with the physics engine...
-				<a class="article-subtitle-id-link" href="#Let's">#</a>
+			<h1 class="page-title">GJK: Collision detection algorithm in 2D/3D</h1>
+			<span class="article-embed article-embed-thumb-yt-icon">
+				<img class="article-embed-thumb" src="../thumbnails/MDusDn8oTSE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MDusDn8oTSE?rel=0&modestbranding=1&autoplay=1')"></img>
+			</span>
+		<p>In my last article, I only covered sphere vs. sphere collisions because they are the simplest to compute. Spheres are nice and all, but there comes a time when more complex shapes are needed. One popular algorithm for testing collisions is the Gilbert-Johnson-Keerthi algorithm, or GJK for short. With it we can detect collisions between any two convex polygons.</p><p>The GJK algorithm is very useful and widely used, but no good visualization or concise explanations exist for some reason. A few years ago, I listened and relistened to a video by <a class="underline" target="_blank" href="https://www.youtube.com/watch?v=Qupqu1xe7Io">Casey Muratori</a> that explains the algorithm in great detail and goes through some smart insights that give a good mental image of how it works. Yet I have found no full interactive visualizations. Let's jump into it!</p>
+			<h2 class="article-subtitle mark-section" id=Difference>
+				Difference between spheres and polygons
+				<a class="article-subtitle-id-link" href="#Difference">#</a>
 			</h2>
-		<p>Physics engines are responsible for figuring out where each object in a scene is over time. Objects can collide with one another, then choose to respond in several ways. It's a generic problem that the user can configure at several different levels. Do they want a collider? Do they want to respond to collisions? Do they want to simulate dynamics? They could want dynamics, but not gravity. It's a problem that calls for good planning and robust design.</p><p>I looked at how bullet and box2d went about sorting their engines and concluded that the way bullet went about it was solid. I boiled it down to just what was needed, and based my design around that. There are already some great articles going over the hard math involved, so I am going to focus on the design aspect instead because I haven't seen anyone do that, and it's also a real headache.</p><p>At the current moment, this physics engine is not fully featured, but in future articles I plan to build it out further. This article will not cover rotation, multiple contact point collisions, or constrained simulation. I think it will work out for the best as it's easy to get overwhelmed, and I want to ease into those topics. With that out of the way, let's dive into the different parts of a physics engine.</p><p>The problem can be split into 2 or 3 pieces, dynamics, collision detection, and collision response. I'll start with dynamics because it is by far the simplest.</p>
-			<h2 class="article-subtitle mark-section" id=Dynamics>
-				Dynamics
-				<a class="article-subtitle-id-link" href="#Dynamics">#</a>
+		<p>Testing for a collision between spheres is easy because there are only two points in the system. This leaves us with a single vector that we can compare against the sum of their radii to determine if there is a collision.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/circles.html"></iframe><p>With polygons we cannot make such simplifications. They are made from multiple vertices, removing any apparent way of finding their distance and clear radius property to compare against. We need a smarter way of testing for a collision.</p><p>Like we subtracted the points in the sphere system, let's see what happens if we subtract the vertices of the polygons.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/sub_poly.html"></iframe><p>Subtracting two polygons with the same number of vertices is straightforward, but if we want to support various polygons, we need to subtract each vertex from every vertex on the other polygon. Because there are multiple vertices, we are not left with a single vector, but many that form another polygon. This results in a cloud of <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number vertices that we need to process further to select the outer convex hull from.</p><p>This outer hull is known as the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Minkowski_addition">Minkowski difference</a>. It represents the distance between every point of the two polygons. We are going to use it to turn two polygons into one that we can analyze to detect a collision. The key is that if the origin is inside the difference, there must have been two points that subtracted to 0; meaning there is overlap somewhere.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/mink_diff.html"></iframe>
+			<h2 class="article-subtitle mark-section" id=Abstracting>
+				Abstracting shapes into supporting points
+				<a class="article-subtitle-id-link" href="#Abstracting">#</a>
 			</h2>
-		<p>Dynamics is all about calculating where the new positions of objects are based on their velocity and acceleration. In high school you learn about the four kinematic equations along with Newton's three laws which describe the motion of objects. We'll only be using the first and third kinematic equations, the others are more useful for analysis of situations, not simulation. That leaves us with:</p>
+		<p>The Minkowski difference is nice for visualization, but far too expensive to compute in real time; we need a way to simplify it.</p><p>The GJK algorithm is only concerned with the outer hull of our cloud of vertices, so it would give a substantial speed up if we could cut down on the time spent finding them. Let's think about what puts a vertex on the hull. If we look closer, notice that those vertices have the most extreme components. They got to their locations from subtraction between two other vertices, so for one to be the most extreme, it must have come from the most extreme vertices on the source polygons. If we define 'most extreme' as the furthest in some direction, we can play with the math to get this speed increase.</p><p>Finding the furthest vertex is done by iterating over the set of vertices and finding the one with the largest dot product in a direction. Let <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover><mi>D</mi><mo stretchy="true">&#x02192;</mo></mover></mrow></math></span> be the direction and <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> be the cloud of vertices.</p>
 			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>v</mi><mo>&#x0003D;</mo><msub><mi>v</mi><mn>0</mn></msub><mo>&#x0002B;</mo><mi>a</mi><mi>t</mi></mrow></math>
+	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mo stretchy="false">&#x00028;</mo><mi>A</mi><mo>&#x02212;</mo><mi>B</mi><mo stretchy="false">&#x00029;</mo></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
+			</div>
+	   <p>Computing <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> took <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number of steps; making this function an <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>O</mi><mo stretchy="false">&#x00028;</mo><msup><mi>n</mi><mn>2</mn></msup><mo stretchy="false">&#x00029;</mo></mrow></math></span> operation. Luckily for us, we can distribute and never have to compute the full difference.</p><p>If we distribute the dot product and max function we're left with this:</p>
+			<div class="article-equation">
+	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x0007D;</mo></mrow></math>
 			</div>
 	   
 			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>&#x00394;</mi><mi>x</mi><mo>&#x0003D;</mo><msub><mi>v</mi><mn>0</mn></msub><mi>t</mi><mo>&#x0002B;</mo><mfrac><mrow><mn>1</mn></mrow><mrow><mn>2</mn></mrow></mfrac><mi>a</mi><msup><mi>t</mi><mn>2</mn></msup></mrow></math>
+	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x0007D;</mo><mo>&#x02212;</mo><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mo>&#x02212;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mo stretchy="false">&#x00029;</mo><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
 			</div>
-	   <p>We can give ourselves more control by using Newtons 2nd law, subbing out acceleration giving us:</p>
-			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>v</mi><mo>&#x0003D;</mo><msub><mi>v</mi><mn>0</mn></msub><mo>&#x0002B;</mo><mfrac><mrow><mi>F</mi></mrow><mrow><mi>m</mi></mrow></mfrac><mi>t</mi></mrow></math>
-			</div>
-	   
-			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>x</mi><mo>&#x0003D;</mo><msub><mi>x</mi><mn>0</mn></msub><mo>&#x0002B;</mo><mi>v</mi><mi>t</mi></mrow></math>
-			</div>
-	   <p>Each object needs to store these three properties: velocity, mass, and net force. Here we find the first decision we can make towards the design, net force could either be a list or a single vector. In school you make force diagrams and sum up the forces, implying that we should store a list. This would make it so you could set a force, but you would need to remove it later which could get annoying for the user. If we think about it further, net force is really the total force applied in a single frame, so we can use a vector and clear it at the end of each update. This allows the user to apply a force by adding it, but removing it is automatic. This shortens our code and gives a performance bump because there is no summation of forces, it's a running total.</p><p>We'll use this struct to store the object info for now.</p>
+	   <p>Now all we need is <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002B;</mo><mi>B</mi></mrow></math></span> steps; turning our quadratic time function into a linear one.</p><p>We need to reverse the direction for <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span> when we distribute max because we want to retain the max value. We want the lest extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>B</mi></mrow></math></span> to subtract from the most extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span>.</p><img class="article-embed" src="../articles/gjk-algorithm/supports.jpg"></img><p>These vertices are referred to as <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Support_function">supporting points</a> and give a view into the Minkowski difference without ever calculating more than we need.</p><p>Let's look at the implementation -- I'm going to continue to use the Collider structs from the <a class="underline" target="_blank" href="../articles/physics-engine">physics engine</a> article for consistency, but will only include the new pieces from this article.</p><p>We'll start by adding a function that finds the support point in a given direction. Let's call it FindFurthestPoint. If we have other special types of colliders like spheres, capsules, or planes, we can override this function allowing them to be used with GJK as well.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Object.h</p>
+				<p class="article-code-file mark-section">Collider.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">Object </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-w">Position; </span><span class="code-c">// struct with 3 floats for x, y, z or i + j + k
-	</span><span class="code-t">vec3 </span><span class="code-w">Velocity;
-	</span><span class="code-t">vec3 </span><span class="code-w">Force;
-	</span><span class="code-r">float </span><span class="code-w">Mass;
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>We need a way to keep track of the objects we want to update. A classic approach is to have a physics world that has list of objects and a step function that loops over each one. Let's see how that might look; I'll omit header/cpp files for brevity.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">PhysicsWorld.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">PhysicsWorld </span><span class="code-s">{
-</span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&ltObject</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_objects;
-	</span><span class="code-t">vec3 </span><span class="code-w">m_gravity </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">9</span><span class="code-s">.</span><span class="code-d">81f</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">);
- 
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">void AddObject   </span><span class="code-s">(Object</span><span class="code-s">* object</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
-	</span><span class="code-r">void RemoveObject</span><span class="code-s">(Object</span><span class="code-s">* object</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
- 
-	</span><span class="code-r">void Step</span><span class="code-s">(
-		</span><span class="code-r">float dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(Object</span><span class="code-s">* obj </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">) </span><span class="code-s">{
-			obj</span><span class="code-s">-</span><span class="code-s">&gtForce </span><span class="code-s">+</span><span class="code-s">= obj</span><span class="code-s">-</span><span class="code-s">&gtMass </span><span class="code-s">* </span><span class="code-w">m_gravity; </span><span class="code-c">// apply a force
- 
-			obj</span><span class="code-s">-</span><span class="code-s">&gtVelocity </span><span class="code-s">+</span><span class="code-s">= obj</span><span class="code-s">-</span><span class="code-s">&gtForce </span><span class="code-s">/ obj</span><span class="code-s">-</span><span class="code-s">&gtMass </span><span class="code-s">* dt;
-			obj</span><span class="code-s">-</span><span class="code-s">&gtPosition </span><span class="code-s">+</span><span class="code-s">= obj</span><span class="code-s">-</span><span class="code-s">&gtVelocity </span><span class="code-s">* dt;
- 
-			obj</span><span class="code-s">-</span><span class="code-s">&gtForce </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">); </span><span class="code-c">// reset net force at the end
-		</span><span class="code-s">}
-	</span><span class="code-s">}
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>Note the use of pointers, this forces other systems to take care of the actual storing of objects, leaving the physics engine to worry about physics, not memory allocation.</p><p>With this you can simulate all sorts of stuff from objects flying through the sky to solar systems.</p>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/crKrkn-RIOU.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/crKrkn-RIOU?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/sHZEs-oQTI4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/sHZEs-oQTI4?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		<p>You can do a lot with this, but it's the easy part to be honest, and that's not what you came for...</p>
-			<h2 class="article-subtitle mark-section" id=Collision>
-				Collision detection
-				<a class="article-subtitle-id-link" href="#Collision">#</a>
-			</h2>
-		<p>Collision detection is more involved, but we can lighten the load by using some clever tricks. Let's think about what needs to be found first. If we look at some examples of objects colliding, we notice that in most cases there is a point on each shape that is furthest inside the other.</p><div class="article-embed article-embed-no-height-limit article-embed-half"><svg class="svg-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 364.19 219.82">
-	<defs>
-		<style>
-			.cls-1 {
-				fill-opacity: 0;
-			}
-
-			.cls-1,
-			.cls-2,
-			.cls-5 {
-				stroke: var(--text-color);
-				stroke-miterlimit: 10;
-				stroke-width: 0.5px;
-			}
-
-			.cls-2 {
-				fill: var(--text-color);
-			}
-
-			.cls-3,
-			.cls-4,
-			.cls-6 {
-				isolation: isolate;
-			}
-
-			.cls-4,
-			.cls-6 {
-				font-size: 14px;
-				font-family: MyriadPro-Regular,
-					Myriad Pro;
-			}
-
-			.cls-4,
-			.cls-5,
-			.cls-6 {
-				fill: var(--text-color);
-			}
-
-			.cls-6 {
-				letter-spacing: 0em;
-			}
-
-			.cls-7 {
-				letter-spacing: 0em;
-			}
-
-			.cls-8 {
-				letter-spacing: -0.01em;
-			}
-		</style>
-	</defs>
-	<g id="Layer_2" data-name="Layer 2">
-		<g id="Layer_1-2" data-name="Layer 1">
-			<path id="a7vJywMoip" class="cls-1"
-				d="M250.74,108.59A108.34,108.34,0,1,1,142.4.25,108.39,108.39,0,0,1,250.74,108.59Z"></path>
-			<path id="aojGvlR1o" class="cls-1" d="M364.19,149.47H0"></path>
-			<path id="b13RQfe45N" class="cls-2" d="M145,216.93a2.64,2.64,0,1,1-2.64-2.64A2.64,2.64,0,0,1,145,216.93Z">
-			</path>
-			<path id="a3jwpJe9bd" class="cls-2" d="M145,149.47a2.64,2.64,0,1,1-2.64-2.64A2.64,2.64,0,0,1,145,149.47Z">
-			</path>
-			<g id="epQfmNKBq" class="cls-3">
-				<text class="cls-4" transform="translate(147.06 211.83)">A</text>
-			</g>
-			<g id="g3JoLaPokP" class="cls-3">
-				<text class="cls-4" transform="translate(147.06 143.56)">B</text>
-			</g>
-			<path id="bnhzn14P" class="cls-5" d="M145,157.62l-2.64-3.82-2.64,3.82h1.68v54.21h1.93V157.62Z"></path>
-			<g id="a5EIiwgkw">
-				<g id="aeJzDwQJn">
-					<text class="cls-6 cls-9" transform="translate(269.3 140.4)">Plane B</text>
-				</g>
-			</g>
-			<g id="lWR9tvULn">
-				<g id="giK7zCiBZ">
-					<text class="cls-4 cls-9" transform="translate(209.6 209.41)">Sphere A</text>
-				</g>
-			</g>
-		</g>
-	</g>
-</svg></div><br /><div class="article-embed article-embed-no-height-limit article-embed-half"><svg class="svg-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 319.48 293.52">
-	<defs>
-		<style>
-			.cls-1 {
-				fill-opacity: 0;
-			}
-
-			.cls-1,
-			.cls-2,
-			.cls-5 {
-				stroke: var(--text-color);
-				stroke-miterlimit: 10;
-				stroke-width: 0.5px;
-			}
-
-			.cls-2 {
-				fill: var(--text-color);
-			}
-
-			.cls-3,
-			.cls-4 {
-				isolation: isolate;
-			}
-
-			.cls-4 {
-				font-size: 14px;
-				font-family: MyriadPro-Regular, Myriad Pro;
-			}
-
-			.cls-4,
-			.cls-5 {
-				fill: var(--text-color);
-			}
-
-			.cls-6 {
-				letter-spacing: -0.01em;
-			}
-
-			.cls-7 {
-				letter-spacing: 0em;
-			}
-		</style>
-	</defs>
-	<g id="Layer_2" data-name="Layer 2">
-		<g id="Layer_1-2" data-name="Layer 1">
-			<path id="circleB" class="cls-1"
-				d="M216.92,108.58A108.34,108.34,0,1,1,108.58.25,108.38,108.38,0,0,1,216.92,108.58Z"></path>
-			<path id="pointA" class="cls-2" d="M201.59,169.27a2.64,2.64,0,1,1-2.64-2.64A2.64,2.64,0,0,1,201.59,169.27Z">
-			</path>
-			<path id="bvujLY3Pv" class="cls-1"
-				d="M319.23,184.93A108.34,108.34,0,1,1,210.89,76.59,108.4,108.4,0,0,1,319.23,184.93Z"></path>
-			<path id="b2sM6mmV3Y" class="cls-2"
-				d="M138.53,105.94a2.64,2.64,0,1,1-2.64-2.64A2.64,2.64,0,0,1,138.53,105.94Z"></path>
-			<g id="g7IjQmpjFM">
-				<g id="a5ffFLN0Lk" class="cls-3">
-					<text class="cls-4" transform="translate(206.96 169.27)">A</text>
-				</g>
-			</g>
-			<g id="f5t39XVL9">
-				<g id="a3HVPWIRk6" class="cls-3">
-					<text class="cls-4" transform="translate(125.66 100.13)">B</text>
-				</g>
-			</g>
-			<path id="a6B9Ro3d2Q" class="cls-5"
-				d="M145.73,112.32l-5.51-1.77,1.78,5.5,1.18-1.18,51.76,51.76,1.37-1.37L144.55,113.5Z"></path>
-			<g id="b34R6jrlf6">
-				<g id="azoQGzEb0">
-					<text class="cls-4 cls-9" transform="translate(254.28 162.37)">Sphere B</text>
-				</g>
-			</g>
-			<g id="c1Pseh1RfC">
-				<g id="j1Q686eol">
-					<text class="cls-4 cls-9" transform="translate(10.62 84.31)">Sphere A</text>
-				</g>
-			</g>
-		</g>
-	</g>
-</svg></div><p>For simple cases, it turns out to be all we need to respond to a collision. From those two points we can find the normal, and how deep the objects are inside one another. This is huge because it means that we can abstract the idea of different shapes away, and only worry about the points in the response.</p><p>Let's jump into the code, we'll need some helper structs that I'll note first.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Transform.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">CollisionPoints </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-w">A; </span><span class="code-c">// Furthest point of A into B
-	</span><span class="code-t">vec3 </span><span class="code-w">B; </span><span class="code-c">// Furthest point of B into A
-	</span><span class="code-t">vec3 </span><span class="code-w">Normal; </span><span class="code-c">// B – A normalized
-	</span><span class="code-r">float </span><span class="code-w">Depth;    </span><span class="code-c">// Length of B – A
-	</span><span class="code-r">bool </span><span class="code-w">HasCollision;
-</span><span class="code-s">};
- 
-</span><span class="code-r">struct </span><span class="code-t">Transform </span><span class="code-s">{ </span><span class="code-c">// Describes an objects location
-	</span><span class="code-t">vec3 </span><span class="code-w">Position;
-	</span><span class="code-t">vec3 </span><span class="code-w">Scale;
-	</span><span class="code-t">quat </span><span class="code-w">Rotation;
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>When I originally wrote this article, I used a technique called double dispatch to call the collision algorithms, but as time when on I grew annoyed with this pattern. It led to a large number of duplicate functions which were just single lines calling other functions. It was very hard to follow and did a poor job solving the issue of locality, which is why I used it in the first place.</p><p>Instead, let’s steal some good ideas from Valve, specifically a table on page 33 of this <a class="underline" target="_blank" href="../articles/physics-engine/DirkGregorius_Contacts.pdf">pdf</a>. We can use functions pointers and enums to centralize the dispatching to the collision algorithms, and at the same time get a well defined table of which interactions our engine supports. </p><p>Each shape will have a different type of collider to hold its properties and a base to allow them to be stored. </p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Colliders.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">enum </span><span class="code-t">ColliderType </span><span class="code-s">{
-	</span><span class="code-d">SPHERE</span><span class="code-s">,
-	</span><span class="code-d">PLANE
-</span><span class="code-s">};
-
 </span><span class="code-r">struct </span><span class="code-t">Collider </span><span class="code-s">{
-	</span><span class="code-t">ColliderType </span><span class="code-w">Type;
-</span><span class="code-s">};
-
-</span><span class="code-r">struct </span><span class="code-t">SphereCollider </span><span class="code-s">: </span><span class="code-t">Collider </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-w">Center;
-	</span><span class="code-r">float </span><span class="code-w">Radius;
-</span><span class="code-s">};
-
-</span><span class="code-r">struct </span><span class="code-t">PlaneCollider </span><span class="code-s">: </span><span class="code-t">Collider </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-w">Normal;
-	</span><span class="code-r">float </span><span class="code-w">Distance;
+	</span><span class="code-r">virtual </span><span class="code-t">vec3 </span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">= </span><span class="code-d">0;
 </span><span class="code-s">};
 </span></pre>
 			</div>
-		<p>Then we can stub out the different interactions we will support. I will include a Sphere vs Sphere and Sphere vs Plane test. I won’t go into the math behind these in this article, but you can find the code <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/include/iw/physics/impl/TestCollision.h#L25">here</a>. </p>
+		<p>Next, we'll make a MeshCollider with a list of vertices to act as our polygon. FindFurthestPoint needs to loop over each vertex and compare the distance along the direction. We'll keep track of the max vertex & distance to compare. Once we have iterated over all the points, we'll return the max point.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">TestCollision.h</p>
+				<p class="article-code-file mark-section">MeshCollider.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-t">CollisionPoints </span><span class="code-f">Test_Sphere_Sphere</span><span class="code-s">(
-	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">* a</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">* ta</span><span class="code-s">,
-	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">* b</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">* tb</span><span class="code-s">);
-
-</span><span class="code-t">CollisionPoints </span><span class="code-f">Test_Sphere_Plane</span><span class="code-s">(
-	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">* a</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">* ta</span><span class="code-s">,
-	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">* b</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">* tb</span><span class="code-s">);
-</span></pre>
-			</div>
-		<p>Note that using this design we lose the benefit of type safety that double dispatch provided, but that is a small price to pay for now simple this design is to understand and extend.</p><p>Now that we have our test functions, we can put them into a table. Let's typedef the function signatures and make a table in a function called TestCollision.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">TestCollision.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">using </span><span class="code-t">FindContactFunc </span><span class="code-s">= </span><span class="code-t">CollisionPoints</span><span class="code-s">(</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-s">(
-		</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">*</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">*</span><span class="code-s">, 
-		</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">*</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">*</span><span class="code-s">);
-
-</span><span class="code-t">CollisionPoints </span><span class="code-f">TestCollision</span><span class="code-s">(
-	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">* </span><span class="code-a">a</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">* </span><span class="code-a">at</span><span class="code-s">, 
-	</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">* </span><span class="code-a">b</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Transform</span><span class="code-s">* </span><span class="code-a">bt</span><span class="code-s">)
-</span><span class="code-s">{
-	</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-t">FindContactFunc </span><span class="code-v">tests</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">]</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">= 
-	</span><span class="code-s">{
-		</span><span class="code-c">// Sphere             Plane
-		</span><span class="code-s">{ </span><span class="code-f">Test_Sphere_Sphere</span><span class="code-s">, </span><span class="code-f">Test_Sphere_Plane </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-c">// Sphere
-		</span><span class="code-s">{ </span><span class="code-r">nullptr</span><span class="code-s">,            </span><span class="code-r">nullptr           </span><span class="code-s">}  </span><span class="code-c">// Plane
-	</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>To call the correct function, we need to do a little dance because we could have passed the colliders in any order. To do this let's sort by the Collider Type enum.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-	</span><span class="code-c">// If we are passed a Plane vs Sphere, swap the 
-	</span><span class="code-c">// colliders so it's a Sphere vs Plane
-	</span><span class="code-r">bool </span><span class="code-v">swap </span><span class="code-s">= </span><span class="code-a">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Type </span><span class="code-s">&gt </span><span class="code-a">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Type;
-
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">swap</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">swap</span><span class="code-s">(</span><span class="code-a">a</span><span class="code-s">, </span><span class="code-a">b</span><span class="code-s">);
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">swap</span><span class="code-s">(</span><span class="code-a">at</span><span class="code-s">, </span><span class="code-a">bt</span><span class="code-s">);
-	</span><span class="code-s">}
-</span></pre>
-			</div>
-		<p>Now we can dispatch to the function stored in our table, and return the points.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-	</span><span class="code-c">// now we can dispatch the correct function
-	</span><span class="code-t">CollisionPoints </span><span class="code-v">points </span><span class="code-s">= </span><span class="code-v">tests</span><span class="code-s">[</span><span class="code-a">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Type</span><span class="code-s">]</span><span class="code-s">[</span><span class="code-a">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Type</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-a">a</span><span class="code-s">, </span><span class="code-a">at</span><span class="code-s">, </span><span class="code-a">b</span><span class="code-s">, </span><span class="code-a">bt</span><span class="code-s">);
-
-	</span><span class="code-c">// if we swapped the order of the colliders, to keep the
-	</span><span class="code-c">// results consistent, we need to swap the points
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">swap</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">swap</span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">A</span><span class="code-s">, </span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">B</span><span class="code-s">);
-		</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">Normal </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">Normal;
-	</span><span class="code-s">}
-
-	</span><span class="code-j">return </span><span class="code-v">points;
-</span></pre>
-			</div>
-		<p>You can use these colliders on their own, but most likely want to attach one to an object. We'll replace Position with a Transform in the Object. We are still only using position in the dynamics but can use scale and rotation in the collision detection. There is a tricky decision to make here. I'm going to use a Transform pointer for now, but we'll come back to this at the end and see why that might not be the best choice.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Object.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">Object </span><span class="code-s">{
-	</span><span class="code-r">float </span><span class="code-w">Mass;
-	</span><span class="code-t">vec3 </span><span class="code-w">Velocity;
-	</span><span class="code-t">vec3 </span><span class="code-w">Force;
- 
-	</span><span class="code-t">Collider</span><span class="code-s">* </span><span class="code-w">Collider;
-	</span><span class="code-t">Transform</span><span class="code-s">* </span><span class="code-w">Transform;
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>A good design practice is to separate all the different aspects of complex functions like Step into their own. This makes the code much more readable, so let's add another function named ResolveCollisions in the physics world.</p><p>First, another helper struct...</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Collision.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">Collision </span><span class="code-s">{
-	</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-w">ObjA;
-	</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-w">ObjB;
-	</span><span class="code-t">CollisionPoints </span><span class="code-w">Points;
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>Again, we have the physics world, I'll compact the parts we have already looked at but it's nice to have context.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">PhysicsWorld.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">PhysicsWorld </span><span class="code-s">{
-</span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Object</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_objects;
-	</span><span class="code-t">vec3 </span><span class="code-w">m_gravity </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">9</span><span class="code-s">.</span><span class="code-d">81f</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">);
- 
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">void </span><span class="code-f">AddObject   </span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* object</span><span class="code-s">);
-	</span><span class="code-r">void </span><span class="code-f">RemoveObject</span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* object</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">Step</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-f">ResolveCollisions</span><span class="code-s">(</span><span class="code-a">dt</span><span class="code-s">);
- 
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-v">obj </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
-	</span><span class="code-s">}
- 
-	</span><span class="code-r">void </span><span class="code-f">ResolveCollisions</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt </span><span class="code-v">collisions;
-
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-v">a </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">)
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-v">b </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">) 
-		</span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">a </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-v">b</span><span class="code-s">)
-				</span><span class="code-j">break;
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">!</span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Collider </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-s">!</span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Collider</span><span class="code-s">)
-				</span><span class="code-j">continue;
-
-			</span><span class="code-t">CollisionPoints </span><span class="code-v">points </span><span class="code-s">= </span><span class="code-f">TestCollision</span><span class="code-s">(
-				</span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Collider</span><span class="code-s">, </span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Transform</span><span class="code-s">,
-				</span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Collider</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Transform
-			</span><span class="code-s">);
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">HasCollision</span><span class="code-s">)
-				</span><span class="code-v">collisions</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">points</span><span class="code-s">);
-		</span><span class="code-s">}
- 
-		</span><span class="code-c">// Solve collisions
-	</span><span class="code-s">}
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>This is looking good. Because of the way we constructed TestCollision, we don't need to know anything about the colliders, and using a break in the for loop gives us the unique pairs, so we never check the same objects twice.</p><p>Now that we have detected a collision, we need some way to react to it.</p>
-			<h2 class="article-subtitle mark-section" id=Collision>
-				Collision Response
-				<a class="article-subtitle-id-link" href="#Collision">#</a>
-			</h2>
-		<p>Now that we have abstracted away the idea of different shapes into points, the collision response is almost pure math. The design is relatively simple compared to what we just went through; we'll start with the idea of a solver. A solver is used to *solve* things about the physics world. That could be the impulse from a collision or raw position correction, really anything you choose to implement.</p><p>Let's start with an interface.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Solver.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">Solver </span><span class="code-s">{
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">virtual </span><span class="code-r">void </span><span class="code-f">Solve</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">collisions</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">) </span><span class="code-s">= </span><span class="code-d">0;
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>We'll need another list in the physics world to store these, and functions to add and remove them. After we generate our list of collisions, we can feed it to each solver.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">PhysicsWorld.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">PhysicsWorld </span><span class="code-s">{
-</span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Object</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_objects;
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Solver</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_solvers;
-	</span><span class="code-t">vec3 </span><span class="code-w">m_gravity </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">9</span><span class="code-s">.</span><span class="code-d">81f</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">);
- 
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">void </span><span class="code-f">AddObject   </span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-a">object</span><span class="code-s">);
-	</span><span class="code-r">void </span><span class="code-f">RemoveObject</span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-a">object</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">AddSolver   </span><span class="code-s">(</span><span class="code-t">Solver</span><span class="code-s">* </span><span class="code-a">solver</span><span class="code-s">);
-	</span><span class="code-r">void </span><span class="code-f">RemoveSolver</span><span class="code-s">(</span><span class="code-t">Solver</span><span class="code-s">* </span><span class="code-a">solver</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">Step</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">ResolveCollisions</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt </span><span class="code-v">collisions;
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Object</span><span class="code-s">* </span><span class="code-v">a </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-c">/* ... </span><span class="code-s">*</span><span class="code-s">/ </span><span class="code-s">}
- 
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Solver</span><span class="code-s">* </span><span class="code-v">solver </span><span class="code-s">: </span><span class="code-w">m_solvers</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-v">solver</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Solve</span><span class="code-s">(</span><span class="code-v">collisions</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
-		</span><span class="code-s">}
-	</span><span class="code-s">}
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>In the last section the meat was in the design, this one leans much more towards what kinds of solvers you implement. I've made an impulse & position solver myself that seem to work for most situations. To keep this short, I won't cover the math here, but you can check out the source for the impulse solver <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/src/physics/Dynamics/ImpulseSolver.cpp">here</a>, and the position solver <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/src/physics/Dynamics/SmoothPositionSolver.cpp">here</a> if you are interested.</p><p>Let's see a demo!</p>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/Q_KAqCmEgyA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/Q_KAqCmEgyA?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		
-			<h2 class="article-subtitle mark-section" id=More>
-				More Options
-				<a class="article-subtitle-id-link" href="#More">#</a>
-			</h2>
-		<p>The real power of a physics engines comes from the options that you give to the user. In this example there aren't too many that can be changed, but we can start to think about the different options we want to add. In most games you want a mix of objects, some that simulate dynamics, and others that are static obstacles. There is also a need for triggers, objects that don't go through the collision response, but fire off events for exterior systems to react to, like an end of level flag. Let's go through some minor edits we can make to allow these settings to be easily configured.</p><p>The biggest change we can make is to distinguish between objects that simulate dynamics and ones that don't. Because of how many more settings a dynamic object needs, let's separate those out from what is necessary for collision detection. We can split Object into CollisionObject and Rigidbody structs. We'll make Rigidbody inherit from CollisionObject to reuse the collider properties and allow us to store both types easily.</p><p>We are left with these two structs. A dynamic_cast could be used to figure out if a CollisionObject is really a Rigidbody, but will make code slightly longer, so I like to add a boolean flag even through it's not considered best practice. We can also add a flag for the object to act as a trigger and a function for a callback. While we're at it, let's beef up the security by protecting the raw values.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">CollisionObject.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">CollisionObject </span><span class="code-s">{
-</span><span class="code-r">protected</span><span class="code-s">:
-	</span><span class="code-t">Transform</span><span class="code-s">* </span><span class="code-w">m_transform;
-	</span><span class="code-t">Collider</span><span class="code-s">* </span><span class="code-w">m_collider;
-	</span><span class="code-r">bool </span><span class="code-w">m_isTrigger;
-	</span><span class="code-r">bool </span><span class="code-w">m_isDynamic;
- 
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">function</span><span class="code-s">&lt</span><span class="code-r">void</span><span class="code-s">(</span><span class="code-t">Collision</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-r">float</span><span class="code-s">)</span><span class="code-s">&gt </span><span class="code-w">m_onCollision;
- 
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-c">// getters & setters, no setter for isDynamic
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>We can add many more settings to the Rigidbody. It's useful if each object has its own gravity, friction, and bounciness. This opens the door to all sorts of physics based effects. In a game you could have an ability that changes the gravity in an area for a time. You could have some objects be bouncy and other like weight balls. A floor could be made of ice and be slippy for a harder challenge.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Rigidbody.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">Rigidbody </span><span class="code-s">: </span><span class="code-t">CollisionObject
+</span><span class="code-r">struct </span><span class="code-t">MeshCollider </span><span class="code-s">: </span><span class="code-t">Collider
 </span><span class="code-s">{
 </span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-t">vec3 </span><span class="code-w">m_gravity;  </span><span class="code-c">// Gravitational acceleration
-	</span><span class="code-t">vec3 </span><span class="code-w">m_force;    </span><span class="code-c">// Net force
-	</span><span class="code-t">vec3 </span><span class="code-w">m_velocity;
- 
-	</span><span class="code-r">float </span><span class="code-w">m_mass;
-	</span><span class="code-r">bool </span><span class="code-w">m_takesGravity; </span><span class="code-c">// If the rigidbody will take gravity from the world.
- 
-	</span><span class="code-r">float </span><span class="code-w">m_staticFriction;  </span><span class="code-c">// Static friction coefficient
-	</span><span class="code-r">float </span><span class="code-w">m_dynamicFriction; </span><span class="code-c">// Dynamic friction coefficient
-	</span><span class="code-r">float </span><span class="code-w">m_restitution;     </span><span class="code-c">// Elasticity of collisions (bounciness)
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">m_vertices;
  
 </span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-c">// getters & setters
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>Let's split the PhysicsWorld into a CollisionWorld and a DynamicsWorld as well. We can move the Step function into the DynamicsWorld, and ResolveCollisions into the CollisionWorld. This saves someone who doesn't want dynamics from sifting through functions that are useless to them.</p><p>We can make some edits to ResolveCollisions function to give triggers their correct functionality. Let's split the function into its parts to keep it readable. Adding a callback to the world can be useful too if you want program wide events.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">CollisionWorld.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">CollisionWorld </span><span class="code-s">{
-</span><span class="code-r">protected</span><span class="code-s">:
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">CollisionObject</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_objects;
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Solver</span><span class="code-s">*</span><span class="code-s">&gt </span><span class="code-w">m_solvers;
- 
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">function</span><span class="code-s">&lt</span><span class="code-r">void</span><span class="code-s">(</span><span class="code-t">Collision</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-r">float</span><span class="code-s">)</span><span class="code-s">&gt </span><span class="code-w">m_onCollision;
- 
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">void </span><span class="code-f">AddCollisionObject   </span><span class="code-s">(</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-a">object</span><span class="code-s">);
-	</span><span class="code-r">void </span><span class="code-f">RemoveCollisionObject</span><span class="code-s">(</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-a">object</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">AddSolver   </span><span class="code-s">(</span><span class="code-t">Solver</span><span class="code-s">* </span><span class="code-a">solver</span><span class="code-s">);
-	</span><span class="code-r">void </span><span class="code-f">RemoveSolver</span><span class="code-s">(</span><span class="code-t">Solver</span><span class="code-s">* </span><span class="code-a">solver</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">SetCollisionCallback</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">function</span><span class="code-s">&lt</span><span class="code-r">void</span><span class="code-s">(</span><span class="code-t">Collision</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-r">float</span><span class="code-s">)</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">callback</span><span class="code-s">);
- 
-	</span><span class="code-r">void </span><span class="code-f">SolveCollisions</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">collisions</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
+	</span><span class="code-t">vec3 </span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-r">override
 	</span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Solver</span><span class="code-s">* </span><span class="code-v">solver </span><span class="code-s">: </span><span class="code-w">m_solvers</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-v">solver</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Solve</span><span class="code-s">(</span><span class="code-a">collisions</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
-		</span><span class="code-s">}
-	</span><span class="code-s">}
+		</span><span class="code-t">vec3  </span><span class="code-v">maxPoint;
+		</span><span class="code-r">float </span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-p">FLT_MAX;
  
-	</span><span class="code-r">void </span><span class="code-f">SendCollisionCallbacks</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt</span><span class="code-s">& </span><span class="code-a">collisions</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Collision</span><span class="code-s">& </span><span class="code-v">collision </span><span class="code-s">: </span><span class="code-a">collisions</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-w">m_onCollision</span><span class="code-s">(</span><span class="code-v">collision</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
- 
-			</span><span class="code-r">auto</span><span class="code-s">& </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-v">collision</span><span class="code-s">.</span><span class="code-w">ObjA</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">OnCollision</span><span class="code-s">(</span><span class="code-s">);
-			</span><span class="code-r">auto</span><span class="code-s">& </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-v">collision</span><span class="code-s">.</span><span class="code-w">ObjB</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">OnCollision</span><span class="code-s">(</span><span class="code-s">);
- 
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">a</span><span class="code-s">) </span><span class="code-v">a</span><span class="code-s">(</span><span class="code-v">collision</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">b</span><span class="code-s">) </span><span class="code-v">b</span><span class="code-s">(</span><span class="code-v">collision</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
-		</span><span class="code-s">}
-	</span><span class="code-s">}
- 
-	</span><span class="code-r">void </span><span class="code-f">ResolveCollisions</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt </span><span class="code-v">collisions;
-		</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">Collision</span><span class="code-s">&gt </span><span class="code-v">triggers;
-		
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-v">a </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">)
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-v">b </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">)
-		</span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">a </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-v">b</span><span class="code-s">)
-				</span><span class="code-j">break;
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">!</span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Col</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-s">!</span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Col</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">)
-				</span><span class="code-j">continue;
-
-			</span><span class="code-t">CollisionPoints </span><span class="code-v">points </span><span class="code-s">= </span><span class="code-f">TestCollision</span><span class="code-s">(
-				</span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Collider</span><span class="code-s">, </span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Transform</span><span class="code-s">,
-				</span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Collider</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">Transform
-			</span><span class="code-s">);
-
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-w">HasCollision</span><span class="code-s">)
-			</span><span class="code-s">{
-				</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">a</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">IsTrigger</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-v">b</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">IsTrigger</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">)
-					</span><span class="code-v">triggers</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">points</span><span class="code-s">);
-				</span><span class="code-j">else
-					</span><span class="code-v">collisions</span><span class="code-s">.</span><span class="code-f">emplace_back</span><span class="code-s">(</span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">points</span><span class="code-s">);
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">vertex </span><span class="code-s">: </span><span class="code-w">m_vertices</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-r">float </span><span class="code-v">distance </span><span class="code-s">= </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">vertex</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&gt </span><span class="code-v">maxDistance</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-v">distance;
+				</span><span class="code-v">maxPoint </span><span class="code-s">= </span><span class="code-v">vertex;
 			</span><span class="code-s">}
 		</span><span class="code-s">}
  
-		</span><span class="code-f">SolveCollisions</span><span class="code-s">(</span><span class="code-v">collisions</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">); </span><span class="code-c">// Don't solve triggers
- 
-		</span><span class="code-f">SendCollisionCallbacks</span><span class="code-s">(</span><span class="code-v">collisions</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
-		</span><span class="code-f">SendCollisionCallbacks</span><span class="code-s">(</span><span class="code-v">triggers</span><span class="code-s">, </span><span class="code-a">dt</span><span class="code-s">);
+		</span><span class="code-j">return </span><span class="code-v">maxPoint;
 	</span><span class="code-s">}
 </span><span class="code-s">};
 </span></pre>
 			</div>
-		<p>To keep the Step function readable, let's split it up into pieces as well.</p>
+		<p>We can roll all of this into a function called Support that will take two colliders and a direction and return the vertex on the Minkowski difference.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">DynamicWorld.h</p>
+				<p class="article-code-file mark-section">GJK.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">DynamicsWorld </span><span class="code-s">: </span><span class="code-r">public </span><span class="code-t">CollisionWorld
+</span><span class="code-t">vec3 </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">)
 </span><span class="code-s">{
-</span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-t">vec3 </span><span class="code-w">m_gravity </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">9</span><span class="code-s">.</span><span class="code-d">81f</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">);
- 
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">void </span><span class="code-f">AddRigidbody</span><span class="code-s">(</span><span class="code-t">Rigidbody</span><span class="code-s">* </span><span class="code-v">rigidbody</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">TakesGravity</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">SetGravity</span><span class="code-s">(</span><span class="code-w">m_gravity</span><span class="code-s">);
-		</span><span class="code-s">}
- 
-		</span><span class="code-f">AddCollisionObject</span><span class="code-s">(</span><span class="code-v">rigidbody</span><span class="code-s">);
-	</span><span class="code-s">}
- 
-	</span><span class="code-r">void </span><span class="code-f">ApplyGravity</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-v">object </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">!</span><span class="code-v">object</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">IsDynamic</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">)
-				</span><span class="code-j">continue;
- 
-			</span><span class="code-t">Rigidbody</span><span class="code-s">* </span><span class="code-v">rigidbody </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-t">Rigidbody</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-v">object;
-			</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">ApplyForce</span><span class="code-s">(</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Gravity</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Mass</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">);
-		</span><span class="code-s">}
-	</span><span class="code-s">}
- 
-	</span><span class="code-r">void </span><span class="code-f">MoveObjects</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-v">object </span><span class="code-s">: </span><span class="code-w">m_objects</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">!</span><span class="code-v">object</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">IsDynamic</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">)
-				</span><span class="code-j">continue;
- 
-			</span><span class="code-t">Rigidbody</span><span class="code-s">* </span><span class="code-v">rigidbody </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-t">Rigidbody</span><span class="code-s">*</span><span class="code-s">)</span><span class="code-v">object;
- 
-			</span><span class="code-t">vec3 </span><span class="code-v">vel </span><span class="code-s">= </span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Velocity</span><span class="code-s">(</span><span class="code-s">)
-				    </span><span class="code-s">+ </span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Force</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Mass</span><span class="code-s">(</span><span class="code-s">)
-				    </span><span class="code-s">* </span><span class="code-a">dt;
- 
-			</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gtSetVelocity</span><span class="code-s">(</span><span class="code-v">vel</span><span class="code-s">);
+	</span><span class="code-j">return </span><span class="code-a">colliderA</span><span class="code-s">.</span><span class="code-f">FindFurthestPoint</span><span class="code-s">( </span><span class="code-a">direction</span><span class="code-s">)
+	     </span><span class="code-s">- </span><span class="code-a">colliderB</span><span class="code-s">.</span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-a">direction</span><span class="code-s">);
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>With these functions, we have abstracted away not only any convex polygon, but any collider type that implements FindFurthestPoint into a single function that we can use in the algorithm.</p>
+			<h2 class="article-subtitle mark-section" id=GJK:>
+				GJK: Surrounding the origin
+				<a class="article-subtitle-id-link" href="#GJK:">#</a>
+			</h2>
+		<p>The goal of the GJK algorithm is to determine if the origin is within the Minkowski difference. This would be easy, but we've thrown out the complete difference for the sake of performance. We only have the Support function that gives us one vertex at a time. We need to iteratively search for and build up what's referred to as a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> around the origin.</p><p>A simplex is defined as a shape that has <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></span> number of vertices with <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math></span> being the number of dimensions. Practically, this represents the simplest shape that can 'select' a region in space. For example, in 2D a triangle is the simplest shape that can select an area containing a specific point. These shapes have simple tests that we can use to determine which vertex, edge, or face is closest to the origin. Depending on which feature is closest, we'll remove, add, or swap points to make the simplex closer to the origin. If we find that the closest feature is already the closest possible, but the origin is not inside, we know there is no collision. Otherwise, if we find the origin inside the simplex we know there has been a collision.</p><p>We get the vertices for the simplex from the Support function, so we need to find the direction to the origin from the closest feature. Searching towards the origin allows the algorithm to converge quickly. Let's look an example. We'll start with an arbitrary vertex then add or remove vertices every iteration until we surround the origin or find it's impossible.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/slide-show.html"></iframe><p>We can see that there are two cases that we need to deal with: a line and triangle. We need one more case in the form of a tetrahedron to select a volume if we want 3D collision detection.</p><div class="article-embed article-embed-no-height-limit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 214.72 64.21">
+	<defs>
+		<style>
+			.cls-1,
+			.cls-3 {
+				fill: var(--text-color);
+			}
 
-			</span><span class="code-t">vec3 </span><span class="code-v">pos </span><span class="code-s">= </span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Position</span><span class="code-s">(</span><span class="code-s">)
-				    </span><span class="code-s">+ </span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Velocity</span><span class="code-s">(</span><span class="code-s">)
-				    </span><span class="code-s">* </span><span class="code-a">dt;
- 
-			</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">SetPosition</span><span class="code-s">(</span><span class="code-a">pos</span><span class="code-s">);
- 
-			</span><span class="code-v">rigidbody</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">SetForce</span><span class="code-s">(</span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">);
-		</span><span class="code-s">}
-	</span><span class="code-s">}
- 
-	</span><span class="code-r">void </span><span class="code-f">Step</span><span class="code-s">(</span><span class="code-r">float </span><span class="code-a">dt</span><span class="code-s">)
-	</span><span class="code-s">{
-		</span><span class="code-f">ApplyGravity</span><span class="code-s">(</span><span class="code-s">);
-		</span><span class="code-f">ResolveCollisions</span><span class="code-s">(</span><span class="code-a">dt</span><span class="code-s">);
-		</span><span class="code-f">MoveObjects</span><span class="code-s">(</span><span class="code-a">dt</span><span class="code-s">);
-	</span><span class="code-s">}
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>Now we have a whole stack of options that the user can configure for many different scenarios with a simple yet powerful API.</p><p>There is one more option that I want to cover. The physics world has no need updating every frame. Say a game like CS:GO gets rendered at 300 fps. It's not checking the physics every frame; it might run at 50 Hz instead. If the game only used the positions from the physics engine, objects would have .02 seconds between each update, causing a jittery look. And that's an ideal rate, some games will only update at 20 Hz leaving .05 seconds between update!</p>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/_-cXkPp-aYw.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_-cXkPp-aYw?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		<p>To get around this, it is common to split the physics world from the rendered world. This is simply done by using a raw Transform instead of a pointer and having a system outside the physics interpolate the position every frame. Let's see how we might implement this.</p><p>First, we'll get rid of that pointer. We'll need to add a last transform as well which will gets set just before the update in MoveObjects.</p>
+			.cls-1,
+			.cls-2,
+			.cls-4,
+			.cls-5 {
+				stroke: var(--text-color);
+			}
+
+			.cls-1,
+			.cls-2,
+			.cls-4,
+			.cls-5,
+			.cls-6,
+			.cls-8,
+			.cls-9 {
+				stroke-miterlimit: 10;
+			}
+
+			.cls-2,
+			.cls-4,
+			.cls-5,
+			.cls-6,
+			.cls-8,
+			.cls-9 {
+				fill: none;
+			}
+
+			.cls-4 {
+				stroke-dasharray: 12;
+			}
+
+			.cls-5 {
+				stroke-dasharray: 3 1;
+			}
+
+			.cls-6,
+			.cls-8,
+			.cls-9 {
+				stroke: #838bc5;
+			}
+
+			.cls-7 {
+				fill: #838bc5;
+			}
+
+			.cls-8 {
+				stroke-dasharray: 20 0 62 27;
+			}
+
+			.cls-9 {
+				stroke-dasharray: 20 0 79 52;
+			}
+		</style>
+	</defs>
+	<g id="Layer_2" data-name="Layer 2">
+		<g id="Layer_1-2" data-name="Layer 1">
+			<circle class="cls-1" cx="3" cy="40.8" r="2.5"></circle>
+			<circle class="cls-1" cx="52.28" cy="59.57" r="2.5"></circle>
+			<circle class="cls-1" cx="60.28" cy="18.74" r="2.5"></circle>
+			<line class="cls-2" x1="60.28" y1="18.74" x2="52.28" y2="59.57"></line>
+			<circle class="cls-1" cx="104.18" cy="61.21" r="2.5"></circle>
+			<circle class="cls-1" cx="112.18" cy="20.38" r="2.5"></circle>
+			<line class="cls-2" x1="112.18" y1="20.38" x2="104.18" y2="61.21"></line>
+			<circle class="cls-1" cx="138.39" cy="34.85" r="2.5"></circle>
+			<line class="cls-2" x1="112.18" y1="20.38" x2="138.39" y2="34.85"></line>
+			<line class="cls-2" x1="104.18" y1="61.21" x2="138.39" y2="34.85"></line>
+			<circle class="cls-1" cx="177.51" cy="61.05" r="2.5"></circle>
+			<circle class="cls-1" cx="185.51" cy="20.21" r="2.5"></circle>
+			<line class="cls-2" x1="185.51" y1="20.21" x2="177.51" y2="61.05"></line>
+			<circle class="cls-1" cx="211.72" cy="34.69" r="2.5"></circle>
+			<line class="cls-2" x1="185.51" y1="20.21" x2="211.72" y2="34.69"></line>
+			<line class="cls-2" x1="177.51" y1="61.05" x2="211.72" y2="34.69"></line>
+			<circle class="cls-3" cx="198" cy="37.35" r="1.5"></circle>
+			<circle class="cls-4" cx="198" cy="37.35" r="1.5"></circle>
+			<line class="cls-5" x1="185.51" y1="20.21" x2="198" y2="37.35"></line>
+			<line class="cls-5" x1="177.51" y1="61.05" x2="198" y2="37.35"></line>
+			<line class="cls-5" x1="211.72" y1="34.69" x2="198" y2="37.35"></line>
+			<line class="cls-6" x1="39.53" y1="40.77" x2="19.17" y2="40.63"></line>
+			<polygon class="cls-7" points="38.67 37.77 43.83 40.8 38.63 43.75 38.67 37.77"></polygon>
+			<line class="cls-6" x1="90.26" y1="48.68" x2="69.89" y2="48.55"></line>
+			<polygon class="cls-7" points="89.4 45.69 94.56 48.71 89.36 51.67 89.4 45.69"></polygon>
+			<line class="cls-6" x1="168.7" y1="41.21" x2="148.33" y2="41.08"></line>
+			<polygon class="cls-7" points="167.84 38.22 173 41.24 167.8 44.2 167.84 38.22"></polygon>
+			<line class="cls-6" x1="74.25" y1="41" x2="94.61" y2="41.14"></line>
+			<polygon class="cls-7" points="75.11 44 69.94 40.97 75.15 38.02 75.11 44"></polygon>
+			<line class="cls-6" x1="152.64" y1="49.11" x2="173" y2="49.24"></line>
+			<polygon class="cls-7" points="153.5 52.1 148.34 49.08 153.54 46.12 153.5 52.1"></polygon>
+			<path class="cls-8"
+				d="M48,29l-1.57-2c-.81-1.17-4.41-6.62-3-13.26C45.14,5.91,53.06.28,61.14.69c9.75.49,16.88,9.63,16.66,18a16.35,16.35,0,0,1-4.74,10.7C67.73,34.72,58.87,36,50.64,32.35">
+			</path>
+			<polygon class="cls-7" points="49.75 26.44 50.64 32.35 45.07 30.16 49.75 26.44"></polygon>
+			<path class="cls-9"
+				d="M99.51,31.07a12.3,12.3,0,0,1-1.62-1.55c-4.36-5.07-2.62-12.11-2.33-13.25,2.43-9.8,13.58-13.84,15-14.33,13.1-4.54,30.1,2,36.91,15,.77,1.46,6.43,12.26,1.95,19-5.4,8.06-24.15,8.17-46.11-2.8">
+			</path>
+			<polygon class="cls-7" points="100.3 27.93 103.31 33.1 97.32 33.12 100.3 27.93"></polygon>
+		</g>
+	</g>
+</svg></div><p>To represent the simplex, let's make a wrapper struct around an std::array. This will allow us to keep track of the number of points, while keeping the memory on the stack for quick access.</p>
 			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">CollisionObject.h</p>
+				<p class="article-code-file mark-section">Simplex.h</p>
 				<pre class="article-code-text cpp">
-</span><span class="code-r">struct </span><span class="code-t">CollisionObject </span><span class="code-s">{
-</span><span class="code-r">protected</span><span class="code-s">:
-	</span><span class="code-t">Transform </span><span class="code-w">m_transform;
-	</span><span class="code-t">Transform </span><span class="code-w">m_lastTransform;
-	</span><span class="code-t">Collider</span><span class="code-s">* </span><span class="code-w">m_collider;
-	</span><span class="code-r">bool </span><span class="code-w">m_isTrigger;
-	</span><span class="code-r">bool </span><span class="code-w">m_isStatic;
-	</span><span class="code-r">bool </span><span class="code-w">m_isDynamic;
- 
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">function</span><span class="code-s">&lt</span><span class="code-r">void</span><span class="code-s">(</span><span class="code-t">Collision</span><span class="code-s">&</span><span class="code-s">, </span><span class="code-r">float</span><span class="code-s">)</span><span class="code-s">&gt </span><span class="code-w">m_onCollision;
-</span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-c">// Getters & setters for everything, no setter for isDynamic
-</span><span class="code-s">};
-</span></pre>
-			</div>
-		<p>Because we used getters and setters, this won't break any code outside the CollisionObject. We can make an exterior system that keeps track of how far it is into the physics update and use a linear interpolation between the last and current position. I'm not going to go into where to put this system, but it should update every frame rather than every physics update.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">PhysicsSmoothStep.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">class </span><span class="code-t">PhysicsSmoothStepSystem </span><span class="code-s">{
+</span><span class="code-r">struct </span><span class="code-t">Simplex </span><span class="code-s">{
 </span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-r">float </span><span class="code-w">m_accumulator </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">.0f;
- 
+	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">array</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">&gt </span><span class="code-w">m_points;
+	</span><span class="code-r">int </span><span class="code-w">m_size;
+
 </span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-r">void </span><span class="code-f">Update</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">Entity </span><span class="code-v">entity </span><span class="code-s">: </span><span class="code-f">GetAllPhysicsEntities</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-t">Transform</span><span class="code-s">*       </span><span class="code-v">transform </span><span class="code-s">= </span><span class="code-v">entity</span><span class="code-s">.</span><span class="code-f">Get</span><span class="code-s">&lt</span><span class="code-t">Transform</span><span class="code-s">&gt</span><span class="code-s">(</span><span class="code-s">);
-			</span><span class="code-t">CollisionObject</span><span class="code-s">* </span><span class="code-v">object    </span><span class="code-s">= </span><span class="code-v">entity</span><span class="code-s">.</span><span class="code-f">Get</span><span class="code-s">&lt</span><span class="code-t">CollisionObject</span><span class="code-s">&gt</span><span class="code-s">(</span><span class="code-s">);
- 
-			</span><span class="code-t">Transform</span><span class="code-s">& </span><span class="code-v">last    </span><span class="code-s">= </span><span class="code-v">object</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">LastTransform</span><span class="code-s">(</span><span class="code-s">);
-			</span><span class="code-t">Transform</span><span class="code-s">& </span><span class="code-v">current </span><span class="code-s">= </span><span class="code-v">object</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-f">Transform</span><span class="code-s">(</span><span class="code-s">);
- 
-			</span><span class="code-v">transform</span><span class="code-s">-</span><span class="code-s">&gtPosition </span><span class="code-s">= </span><span class="code-f">lerpf</span><span class="code-s">(
-				</span><span class="code-v">last</span><span class="code-s">.Position</span><span class="code-s">,
-				</span><span class="code-v">current</span><span class="code-s">.Position</span><span class="code-s">,
-				</span><span class="code-w">m_accumulator </span><span class="code-s">/ </span><span class="code-f">PhysicsUpdateRate</span><span class="code-s">(</span><span class="code-s">)
-			</span><span class="code-s">);
-		</span><span class="code-s">}
- 
-		</span><span class="code-w">m_accumulator </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-f">FrameDeltaTime</span><span class="code-s">(</span><span class="code-s">);
+	</span><span class="code-f">Simplex</span><span class="code-s">(</span><span class="code-s">)
+		</span><span class="code-s">: </span><span class="code-w">m_size </span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">)
+	</span><span class="code-s">{</span><span class="code-s">}
+
+	</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-s">operator=</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">initializer_list</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-a">list</span><span class="code-s">) 
+	</span><span class="code-s">{
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">point </span><span class="code-s">: </span><span class="code-a">list</span><span class="code-s">)
+			</span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-w">m_size</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">point;
+
+		</span><span class="code-j">return </span><span class="code-s">*</span><span class="code-r">this;
 	</span><span class="code-s">}
- 
-	</span><span class="code-r">void </span><span class="code-f">PhysicsUpdate</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-w">m_accumulator </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">.0f;
+
+	</span><span class="code-r">void </span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">point</span><span class="code-s">) 
+	</span><span class="code-s">{
+		</span><span class="code-w">m_points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-a">point</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">};
+		</span><span class="code-w">m_size </span><span class="code-s">= </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-w">m_size </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">);
 	</span><span class="code-s">}
+
+	</span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-r">operator</span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">i</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-a">i</span><span class="code-s">]; </span><span class="code-s">}
+	</span><span class="code-t">size_t </span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_size; </span><span class="code-s">}
+
+	</span><span class="code-r">auto </span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-s">}
+	</span><span class="code-r">auto </span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">- </span><span class="code-s">(</span><span class="code-d">4 </span><span class="code-s">- </span><span class="code-w">m_size</span><span class="code-s">); </span><span class="code-s">}
 </span><span class="code-s">};
 </span></pre>
 			</div>
-		<p>This system smoothy moves the objects between their positions in the physics engines every frame, removing all jittery artifacts from the movement.</p>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/0xJ-oRCPRk8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0xJ-oRCPRk8?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		<p>And that's the final result. I hope you can use the principles from this article to get a better idea of how to lay out complex systems in nimble ways, or even make your own engine. There is a lot more to cover, but I'll leave it to a part 2 because this is getting long. Let me know what you thought, should I keep focusing on design, or dive deeper into the math behind the implementations?</p><p>Thanks for reading, I hope to catch you next time</p>
+		<p>We need at least one vertex to start, so we'll manually add it. The search direction for the first vertex doesn't matter, but you may get less iterations with a smarter choice. I'm going to use unit x (1, 0, 0) for no particular reason.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">GJK.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">GJK</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-c">// Get initial support point in any direction
+	</span><span class="code-t">vec3 </span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">);
+</span></pre>
+			</div>
+		<p>Now that we have one point, we can add it to the simplex and set the search direction towards the origin.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+	</span><span class="code-c">// Simplex is an array of points, max count is 4
+	</span><span class="code-f">Simplex </span><span class="code-v">points;
+	</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+
+	</span><span class="code-c">// New direction is towards the origin
+	</span><span class="code-t">vec3 </span><span class="code-v">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">support;
+</span></pre>
+			</div>
+		<p>In a loop, we'll add another point. The exit condition is that this new point is not in front of the search direction. This would exit if the direction finds a vertex that was already the furthest one along it.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+	</span><span class="code-j">while </span><span class="code-s">(</span><span class="code-r">true</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">);
+ 
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">) </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">false; </span><span class="code-c">// no collision
+		</span><span class="code-s">}
+
+		</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+</span></pre>
+			</div>
+		<p>Now that we have a line, we'll feed it into a function that updates the simplex and search direction. It'll return true or false to signify a collision.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">true;
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>That's all for the main loop. It's dead simple in the world of algorithms, but the real work is in the NextSimplex function. We need a series of different checks for each shape of simplex to see what the new simplex should be and what direction we'll search in next.</p><p>The NextSimplex function will act as a dispatcher to three other functions, one for each shape.</p>
+			<div class="article-code draw-left-line">
+				<p class="article-code-file mark-section">GJK.h</p>
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-j">switch </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">case </span><span class="code-d">2</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Line       </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-j">case </span><span class="code-d">3</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Triangle   </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-j">case </span><span class="code-d">4</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-c">// never should be here
+	</span><span class="code-j">return </span><span class="code-r">false;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>We can add one more helper function to help lessen the headache from these next functions.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">ao</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-j">return </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-a">ao</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<p>We'll start with the line case. There are three possible regions that the origin could be in, but realistically only two. We started with point B, and searched in the direction of A, which means that the origin cannot be in the red region. This leaves us with one check between the vector AB and AO. If AO is inside the green region, we move on. If AO is in the blue region, we'll come back to the line case, but B will be replaced.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
+
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">);
+	</span><span class="code-s">}
+
+	</span><span class="code-j">else </span><span class="code-s">{
+		</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a </span><span class="code-s">};
+		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">ao;
+	</span><span class="code-s">}
+
+	</span><span class="code-j">return </span><span class="code-r">false;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<img class="article-embed" src="../articles/gjk-algorithm/line.jpg"></img><p>In this case, AO is in the same direction as AB, so we know it's in the green region. We'll set the search direction pointing towards the origin and move on. In 2D, you would not need to use cross products, but in 3D the origin could be anywhere in a cylinder around the line, so we need them to get the correct direction.</p><p>The triangle case has seven regions, but again we can cull out some impossibilities. Yellow, red, and purple cannot have the origin because the new point we added was A, meaning that the origin cannot be in the direction of the BC face. That leaves us with four regions we need to check.</p><p>If the origin is outside the triangle on the AC face, we'll check if it's also in the direction of AC. If it is, then we'll remove B from the simplex and move on, if not, we'll do a line case between AB. If the origin was not in the direction of the AC face, we'll check the AB face. If it's there, we'll do the same line case between AB. Finally, if both checks fail, we know it must be inside the triangle. In 2D we would be done and could return true, but in 3D we need to check if the origin is above or below the triangle and move on.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">];
+
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+ 
+	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">};
+			</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+		</span><span class="code-s">}
+
+		</span><span class="code-j">else </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">else </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">abc</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-s">}
+
+		</span><span class="code-j">else </span><span class="code-s">{
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">abc;
+			</span><span class="code-s">}
+
+			</span><span class="code-j">else </span><span class="code-s">{
+				</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">};
+				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">abc;
+			</span><span class="code-s">}
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+
+	</span><span class="code-j">return </span><span class="code-r">false;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<img class="article-embed" src="../articles/gjk-algorithm/triangle.jpg"></img><p>The tetrahedron case is the most complex, but almost entirely made up of triangle cases. We don't need to test for the origin below the tetrahedron for the same reason as before. We only need to determine which face, if any, the origin is in the direction of. If there is one, we'll go back to the triangle case with that face as the simplex, but if not, we know it must be inside the tetrahedron and we'll return true.</p>
+			<div class="article-code draw-left-line">
+				
+				<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+</span><span class="code-s">{
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">d </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">3</span><span class="code-s">];
+
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ad </span><span class="code-s">= </span><span class="code-v">d </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+ 
+	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">acd </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ad</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">adb </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ad</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">);
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+		
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">acd</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">d </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">adb</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">d</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-s">}
+ 
+	</span><span class="code-j">return </span><span class="code-r">true;
+</span><span class="code-s">}
+</span></pre>
+			</div>
+		<img class="article-embed" src="../articles/gjk-algorithm/tetrahedron.jpg"></img><p>With that final case, we have completed the GJK algorithm. As you can see it is not that complex looking at it from a geometric point of view. This algorithm only gives you a yes/no answer about a collision, so you cannot respond to it. In the next article I will cover an algorithm that uses the simplex and similar principles to find the collision normal then maybe get into rotational physics. Thanks for reading!</p><p>Here is a demo that will let you play around with the algorithm and let you inspect each iteration, here's the <a class="underline" target="_blank" href="../articles/gjk-algorithm/app/demo.html">full version</a> if you want a better look...</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/demo.html"></iframe>
 			
 			<div class="article-comment-section">
 				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
 				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://comments.winter.dev&subject=physics-engine"></iframe>
+				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://comments.winter.dev&subject=gjk-algorithm"></iframe>
 				<script src="../scripts/resize_comment_section.js"></script>
 			</div>
 	   
