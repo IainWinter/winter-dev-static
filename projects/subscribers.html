@@ -158,7 +158,7 @@
 	let lastPoint = 0;
 	const tooltip = d3.select("#tooltip");
 
-	d3.json("https://api.winter.dev/subscribers").then(data => {
+	d3.json("https://api.winter.dev/subscribers/").then(data => {
 		lastPoint = data[data.length - 1];
 
 		// Set the domain of the x and y scales
