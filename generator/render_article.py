@@ -136,7 +136,7 @@ def render_article(text, functions, exit_on_meta = False):
 					# This should be in its own functions
 					# but this works for now
 					if exit_on_meta:
-						return meta
+						return (meta, i + 3)
 
 					state = STATE_TEXT
 					advance(2)

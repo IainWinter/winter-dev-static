@@ -548,7 +548,7 @@ private:
  
 public:
 	void `f`Update() {
-		for (`t`Entity entity : `f`GetAllPhysicsEntities()) {
+		for (`t`Entity `v`entity : `f`GetAllPhysicsEntities()) {
 			`t`Transform*       `v`transform = `v`entity.`f`Get<`t`Transform>();
 			`t`CollisionObject* `v`object    = `v`entity.`f`Get<`t`CollisionObject>();
  

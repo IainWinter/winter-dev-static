@@ -4,6 +4,7 @@ from render_template import render_template
 import latex2mathml.converter
 from os.path import join
 from file import read_file, ref, ref_page
+import datetime
 
 def title(io, text):
 	io.write(f'<h1 class="page-title">{text}</h1>')
@@ -37,10 +38,7 @@ def vars(io):
 		</script>
 	''')
 
-def ref_resource(io, path):
-	io.write(ref(path))
-
-def render_winter_dev_single_article(template_text: str, article_text: str) -> str:
+def render_winter_dev_article(template_text: str, article_text: str) -> str:
 	def sub_title(io, text):
 		id = text.split(' ', 1)[0] # use first word as id
 
@@ -173,14 +171,39 @@ def render_winter_dev_single_article(template_text: str, article_text: str) -> s
 		"comments": comments,
 		"top": top,
 		"vars": vars,
-		"ref": ref_resource,
 	}
 
 	rendered_text = render_template(template_text, template_funcs)
 
 	return (rendered_text, meta)
 
-def render_winter_dev_card_list(template_text: str, card_list_title: str, card_meta_list) -> str:
+def render_winter_dev_project(template_text: str, project_text: str) -> str:
+	# Get just the meta data from the project text
+	# may want to make this a seperate function
+	(meta, start_of_text) = render_article(project_text, {}, True)
+	
+	def page_title(io):
+		io.write(f'<h1 class="page-title">{meta["title"]}</h1>')
+
+	def name(io):
+		io.write(meta["title"])
+
+	def project(io):
+		io.write(project_text[start_of_text:])
+
+	template_funcs = {
+		"top": top,
+		"name": name,
+		"title": page_title,
+		"project": project,
+		"vars": vars,
+	}
+
+	rendered_text = render_template(template_text, template_funcs)
+
+	return (rendered_text, meta)
+
+def render_winter_dev_card_list(template_text: str, card_list_title: str, card_list_slug_href_root: str, card_meta_list) -> str:
 	def card(io, meta_data):
 		if "published" not in meta_data or meta_data["published"] == "false":
 			return
@@ -194,7 +217,7 @@ def render_winter_dev_card_list(template_text: str, card_list_title: str, card_m
 		slug_text = meta_data.get("slug", "")
 		img_text = meta_data.get("thumbnail", "")
 
-		slug_href = ref_page(f'articles/{slug_text}')
+		slug_href = ref_page(f'{card_list_slug_href_root}/{slug_text}')
 		thumb_href = ref(f'thumbnails/{img_text}')
 
 		title_text = meta_data["title"]
@@ -219,8 +242,12 @@ def render_winter_dev_card_list(template_text: str, card_list_title: str, card_m
 	def card_list(io, meta_data_list):
 		io.write('<div>')
 
-		meta_data_with_thumbnails    = [meta_data for meta_data in meta_data_list if "thumbnail" in meta_data]
-		meta_data_without_thumbnails = [meta_data for meta_data in meta_data_list if "thumbnail" not in meta_data]
+		# sort meta_data_list by date string, first convert the date string to a sortable format
+		meta_data_list_copy = meta_data_list.copy()
+		meta_data_list_copy.sort(key=lambda meta_data: meta_data["date"].replace('/', '-'), reverse=True)
+
+		meta_data_with_thumbnails    = [meta_data for meta_data in meta_data_list_copy if "thumbnail" in meta_data]
+		meta_data_without_thumbnails = [meta_data for meta_data in meta_data_list_copy if "thumbnail" not in meta_data]
 
 		for meta_data in meta_data_with_thumbnails:
 			card(io, meta_data)
@@ -248,16 +275,14 @@ def render_winter_dev_card_list(template_text: str, card_list_title: str, card_m
 		"card-list-title": write_card_list_title,
 		"card-list": write_card_list,
 		"vars": vars,
-		"ref": ref_resource,
 	}
 
 	return render_template(template_text, template_funcs)
 
-def render_winter_dev_support(template_test: str) -> str:
+def render_winter_dev_support(template_text: str) -> str:
 	template_funcs = {
 		"top": top,
 		"vars": vars,
-		"ref": ref_resource,
 	}
 
-	return render_template(template_test, template_funcs)
+	return render_template(template_text, template_funcs)

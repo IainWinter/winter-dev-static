@@ -155,7 +155,7 @@
 	}
 }
 
-@media (max-height: 520px) {
+@media (max-height: 520px) and (min-width: 1200px) {
 	.nav-section {
 		margin: auto 0 var(--pad) 0;
 		position: unset;

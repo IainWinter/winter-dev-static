@@ -1,12 +1,8 @@
-function loadInitalCookieOrSetDefault() {
-	let theme = localStorage.getItem("theme");
-	
-	if (theme === null) {
-		theme = "dark"; // set the default theme to dark
-		localStorage.setItem("theme", theme);
-	}
+let theme = localStorage.getItem("theme");
 
-	window.document.documentElement.setAttribute("color-theme", theme);
+if (theme === null) {
+	theme = "dark"; // set the default theme to dark
+	localStorage.setItem("theme", theme);
 }
 
-loadInitalCookieOrSetDefault();
+window.document.documentElement.setAttribute("color-theme", theme);

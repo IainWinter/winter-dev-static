@@ -80,6 +80,11 @@ h4 {
 	font-weight: 700;
 }
 
+.full-page {
+	flex-grow: 1;
+	max-width: unset;
+}
+
 .page-title {
 	margin: 0 0 var(--pad) 0;
 	/* font-size: 58px; */
