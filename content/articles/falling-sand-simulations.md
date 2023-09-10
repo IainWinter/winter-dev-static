@@ -1,11 +1,3 @@
----
-title: Making games with Falling Sand part 1
-slug: falling-sand
-date: December 30, 2020
-thumbnail: wZJCQQPaGZI.jpg
-published: true
----
-
 [title](Making games with Falling Sand part 1)
 
 [iframe-youtube-video](https://www.youtube.com/embed/wZJCQQPaGZI?start=6&rel=0)

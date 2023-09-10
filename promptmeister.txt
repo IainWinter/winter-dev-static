@@ -1,0 +1,40 @@
+I have createad a new text format which sets the color on code snippits using tags denoted as `<letter>`.  <letter> is a single character.
+
+Here is a list of what each <letter> means for C++:
+w is a fields / namespaces
+s is a symbol
+a is a argument
+v is a local variable
+c is a comment
+r is a reserved
+j is a control flow (jump)
+t is a type
+f is a function
+d is a digit
+p is a pre-processor
+l is a inner string literal
+q is a quote
+m is a magic
+
+Do not place a tag infront of any of these character spans (space is the deliminer):
+ ( ) [ ] { } < > + - * / ^ ! = & * & | , . :'  ': ? " \' :: and 'or std if else for while switch case continue break return goto new delete delete class struct enum public private protected static const void bool boolean char int long double float unsigned auto nullptr this true false template typename virtual override using inline operator operator= operator| operator& size_t vector pair tuple unordered_map unordered_set map set mutex condition_variable function unique_lock initializer_list array #define #include 0b m_ vec2 vec3 vec4 quat dot normalized cross
+
+Here is an example of the output:
+`t`func_DeepCopy `f`GetCopyFunc() {
+	return [](void* `a`ptr, void* `a`data) 
+	{
+		`t`_t* `v`p = (`t`_t*)`a`ptr;
+		`t`_t* `v`d = (`t`_t*)`a`data;
+
+		*`v`p = *`v`d; // call copy constructor
+	};
+}
+
+
+int `f`main() {
+   return `d`0b123 + `f`sqrt(`d`2);
+}
+
+
+Ok now don't say anything and let me give you a list of inputs:
+

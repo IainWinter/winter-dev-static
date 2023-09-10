@@ -15,14 +15,28 @@ def write_file(path, text):
 		f.write(text)
 
 def copy_changed_files(source_dir, target_dir):
-    for root, _, files in os.walk(source_dir):
-        for file in files:
-            source_path = os.path.join(root, file)
-            target_path = os.path.join(target_dir, os.path.relpath(source_path, source_dir))
+	for root, _, files in os.walk(source_dir):
+		for file in files:
+			source_path = os.path.join(root, file)
+			target_path = os.path.join(target_dir, os.path.relpath(source_path, source_dir))
 
-            if not os.path.exists(target_path) or not filecmp.cmp(source_path, target_path):
-                shutil.copy2(source_path, target_path)
-                print(f"Copied: {source_path} -> {target_path}")
+			if not os.path.exists(target_path) or not filecmp.cmp(source_path, target_path):
+				os.makedirs(os.path.dirname(target_path), exist_ok=True)
+				shutil.copy2(source_path, target_path)
+				print(f"Copied: {source_path} -> {target_path}")
+
+#
+# file cache
+#
+
+g_filecache = {}
+
+def read_file_cached(filepath):
+	if filepath not in g_filecache:
+		file_contents = read_file(filepath)
+		g_filecache[filepath] = file_contents 
+	
+	return g_filecache[filepath]
 
 # use a global config for linking files
 # based on if this should be a local export that can link files correctly when exported as file://

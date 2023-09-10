@@ -1,11 +1,3 @@
----
-title: Designing a physics engine
-slug: physics-engine
-date: July 31, 2020
-thumbnail: -_IspRG548E.jpg
-published: true
----
-
 [title](Designing a physics engine)
 
 By coincidence, right when The Cherno announced his game engine series I was just starting to get going on my own engine. I couldn't wait to finally have a professional opinion on how to make one. With self-taught programming it's hard to not doubt yourself constantly, wondering if you are doing things right or just think you are.

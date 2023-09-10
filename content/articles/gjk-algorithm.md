@@ -1,11 +1,3 @@
----
-title: GJK: Collision detection algorithm in 2D/3D
-slug: gjk-algorithm
-date: August 29, 2020
-thumbnail: MDusDn8oTSE.jpg
-published: true
----
-
 [title](GJK: Collision detection algorithm in 2D/3D)
 
 [iframe-youtube-video](https://www.youtube.com/embed/MDusDn8oTSE?rel=0)

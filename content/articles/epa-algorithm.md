@@ -1,11 +1,3 @@
----
-title: EPA: Collision response algorithm for 2D/3D
-slug: epa-algorithm
-date: November 17, 2020
-thumbnail: 0XQ2FSz3EK8.jpg
-published: true
----
-
 [title](EPA: Collision response algorithm for 2D/3D)
 
 Last time we looked at an algorithm for testing collisions between two convex polygons called GJK. It's a useful algorithm for sure, but it doesn't give us enough information to respond to the collisions it detects. In this article I'll describe an extension that allows us to find the correct normal and depth of the collisions. This extension provides the information that the solvers need to resolve a collision as I demonstrated in my original physics engine [link](article, /articles/physics-engine#collision-response).

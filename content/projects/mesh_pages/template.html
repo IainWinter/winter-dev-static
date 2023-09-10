@@ -1,14 +1,15 @@
 <html lang="en">
-
+ 
 <head>
-	<title>Support</title>
+	<title>[name]()</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="favicon.ico">
 	<link rel="icon" type="image/x-icon" href="~/favicon.ico">
 	<link rel="stylesheet" href="~/styles/global.css" />
 	<link rel="stylesheet" href="~/styles/top.css" />
 	<link rel="stylesheet" href="~/styles/card.css" />
+	<link rel="stylesheet" href="~/styles/code.css" />
 	<link rel="stylesheet" href="~/styles/article.css" />
+	<link rel="stylesheet" href="~/projects/mesh/style.css">
 </head>
 
 [vars]()
@@ -18,12 +19,22 @@
 	<div class="main">
 		[top]()
 		<div class="page">
-			<div class="article-comment-section">
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="~/external/comments.html?host=https://api.winter.dev/comments&subject=epa-algorithm"></iframe>
-				<script src="~/scripts/resize_comment_section.js"></script>
+			[shape-title]()
+			<div class="shape-article">
+				<div class="shape-article-text">
+					[shape-article]()
+				</div>
+			
+				<div class="shape-side-panel">
+					[shape-tools]()
+				</div>
 			</div>
 		</div>
 	</div>
+
+	<script src="~/projects/mesh/p5.min.js"></script>
+	<script src="~/projects/mesh/script.js"></script>
+	<script src="~/projects/mesh/[id]().js"></script>
 </body>
 
 </html>

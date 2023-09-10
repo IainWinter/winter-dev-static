@@ -1,10 +1,3 @@
----
-title: Another way of programming, taking it slow
-slug: another-way
-date: July 6, 2020
-published: true
----
-
 [title](Another way of programming, taking it slow)
 
 Whenever I sit down to write some code, I always get an itch to finish whatever problem is staring me in the face right at that moment. Over the last 2 years, I've realized that if you can afford to tackle a problem over a long period of time, you should absolutely go for that option.

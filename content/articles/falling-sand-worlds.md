@@ -1,11 +1,3 @@
----
-title: Making an infinite world with Falling Sand part 2
-slug: falling-sand-worlds
-date: March 27, 2021
-thumbnail: vNcsPE_YdmA.jpg
-published: true
----
-
 [title](Making an infinite world with Falling Sand part 2)
 
 [iframe-youtube-video](https://www.youtube.com/embed/vNcsPE_YdmA?rel=0)
