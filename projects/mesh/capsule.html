@@ -1,0 +1,80 @@
+<html lang="en">
+
+<head>
+	<title>Capsule</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" type="image/x-icon" href="../../favicon.ico">
+	<link rel="stylesheet" href="../../styles/global.css" />
+	<link rel="stylesheet" href="../../styles/top.css" />
+	<link rel="stylesheet" href="../../styles/card.css" />
+	<link rel="stylesheet" href="../../projects/mesh/style.css">
+</head>
+
+
+		<script>
+			const g_exportRootPath = "../../";
+			function ref(path) { return g_exportRootPath + path; }
+		</script>
+	
+<script src="../../scripts/no_flashbang.js"></script>
+
+<body color-theme="dark">
+	<div class="main">
+		
+		<div class="top">
+			<h1 class="title">Winter</h1>
+			<div class="nav-section">
+				<div class="nav-links">
+					<a class="nav-link" href="../../articles.html">Articles</a>
+					<a class="nav-link" href="../../projects.html">Projects</a>
+					<a class="nav-link" href="../../support.html">Support</a>
+				</div>
+
+				<hr class="nav-separator" />
+
+				<div class="nav-buttons">
+					<img id="toggle-dark-icon" src="../../icons/light_off.svg" onclick="toggleDark();"/>
+				</div>
+			</div>
+		</div>
+		<script src="../../scripts/toggle_dark.js"></script>
+	
+		<div class="page">
+			<h1 class="page-title">Mesh / Capsule</h1>
+			<div class="shape-article">
+				<div class="shape-article-text">
+					<p>This is a test</p>
+				</div>
+			
+				<div class="shape-side-panel">
+					
+			<div class="shape-side-panel-top">
+				<div id="capsule"></div>
+				<h3 class="shape-side-panel-name">Capsule</h3>
+		
+				<div class="shape-tool" id="capsule-tools-res">
+					<p>Resolution</p>
+				</div>
+			
+				<div class="shape-tool" id="capsule-tools-height">
+					<p>Height</p>
+				</div>
+			
+				<div class="shape-tool" id="capsule-tools-radius">
+					<p>Radius</p>
+				</div>
+			
+			</div>
+			<table id="shape-table" class="shape-side-panel-table"></table>
+		
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="../../projects/mesh/p5.min.js"></script>
+	<script src="../../projects/mesh/script.js"></script>
+	<script src="../../projects/mesh/capsule.js"></script>
+</body>
+
+</html>
