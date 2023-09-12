@@ -41,7 +41,7 @@
 	
 		<div class="page">
 			<h1 class="page-title">EPA: Collision response algorithm for 2D/3D</h1><p>Last time we looked at an algorithm for testing collisions between two convex polygons called GJK. It's a useful algorithm for sure, but it doesn't give us enough information to respond to the collisions it detects. In this article I'll describe an extension that allows us to find the correct normal and depth of the collisions. This extension provides the information that the solvers need to resolve a collision as I demonstrated in my original physics engine <a class="underline" target="_blank" href="/articles/physics-engine#collision-response">article</a>.</p><p>I call this algorithm an extension because its input is the internal state from GJK. If you recall, we were working with a simplex to try and surround the origin with a triangle in 2D or a tetrahedron in 3D. This algorithm takes the final simplex that contained the origin and finds the normal of collision, aka the shortest vector to nudge the shapes out of each other. The naive solution is to use the normal of the closest face to the origin, but remember, a simplex does not need to contain any of the original polygon's faces, so we could end up with an incorrect normal.</p><p>Let's jump into it, it's called the Expanding Polytope Algorithm because it expands the simplex by adding vertices to it until we find the shortest normal from a face that is on the original polygon. For jargon's sake, a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> becomes a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Polytope">polytope</a> after we begin adding more vertices to it. How do we do that? Well we already have the tools from GJK, all we need to do is iterate over the faces and find the closest one. Then we'll use the Support function to find if there is a point  further in the direction of that normal. If there is one, the face of the polytope must be inside the original polygon and can be expanded. If so, we'll add this supporting point and repeat.</p><p>In 2D this is easy, we can just add the point and the edges remain intact. In 3D we need to do a little repair job, which is where most of the annoyance comes from. Let's start with the 2D version first, because it shows the algorithm's main pieces, then we'll see how to repair the 3D polytope.</p>
-		<h2 class="article-subtitle mark-section" id=2D>
+		<h2 class="article-subtitle mark-section" id="2D">
 			2D in Javascript
 			<a class="article-subtitle-id-link" href="#2D">#</a>
 		</h2>
@@ -191,7 +191,7 @@
 </span></pre>
 		</div>
 	<p>That's it for the 2D version. Now that we've looked at the core of this algorithm, we can make the jump to 3D. The main difference between the two is that in 2D the edges are implied by the order of the vertices, but in 3D we need to explicitly define the faces because each vertex is shared between three or more faces.</p>
-		<h2 class="article-subtitle mark-section" id=3D>
+		<h2 class="article-subtitle mark-section" id="3D">
 			3D in C++
 			<a class="article-subtitle-id-link" href="#3D">#</a>
 		</h2>

@@ -45,12 +45,12 @@
 			<img class="article-embed-thumb" src="../thumbnails/MDusDn8oTSE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MDusDn8oTSE?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>In my last article, I only covered sphere vs. sphere collisions because they are the simplest to compute. Spheres are nice and all, but there comes a time when more complex shapes are needed. One popular algorithm for testing collisions is the Gilbert-Johnson-Keerthi algorithm, or GJK for short. With it we can detect collisions between any two convex polygons.</p><p>The GJK algorithm is very useful and widely used, but no good visualization or concise explanations exist for some reason. A few years ago, I listened and relistened to a video by <a class="underline" target="_blank" href="https://www.youtube.com/watch?v=Qupqu1xe7Io">Casey Muratori</a> that explains the algorithm in great detail and goes through some smart insights that give a good mental image of how it works. Yet I have found no full interactive visualizations. Let's jump into it!</p>
-		<h2 class="article-subtitle mark-section" id=Difference>
+		<h2 class="article-subtitle mark-section" id="Difference">
 			Difference between spheres and polygons
 			<a class="article-subtitle-id-link" href="#Difference">#</a>
 		</h2>
 	<p>Testing for a collision between spheres is easy because there are only two points in the system. This leaves us with a single vector that we can compare against the sum of their radii to determine if there is a collision.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/circles.html"></iframe><p>With polygons we cannot make such simplifications. They are made from multiple vertices, removing any apparent way of finding their distance and clear radius property to compare against. We need a smarter way of testing for a collision.</p><p>Like we subtracted the points in the sphere system, let's see what happens if we subtract the vertices of the polygons.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/sub_poly.html"></iframe><p>Subtracting two polygons with the same number of vertices is straightforward, but if we want to support various polygons, we need to subtract each vertex from every vertex on the other polygon. Because there are multiple vertices, we are not left with a single vector, but many that form another polygon. This results in a cloud of <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number vertices that we need to process further to select the outer convex hull from.</p><p>This outer hull is known as the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Minkowski_addition">Minkowski difference</a>. It represents the distance between every point of the two polygons. We are going to use it to turn two polygons into one that we can analyze to detect a collision. The key is that if the origin is inside the difference, there must have been two points that subtracted to 0; meaning there is overlap somewhere.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/mink_diff.html"></iframe>
-		<h2 class="article-subtitle mark-section" id=Abstracting>
+		<h2 class="article-subtitle mark-section" id="Abstracting">
 			Abstracting shapes into supporting points
 			<a class="article-subtitle-id-link" href="#Abstracting">#</a>
 		</h2>
@@ -115,7 +115,7 @@
 </span></pre>
 		</div>
 	<p>With these functions, we have abstracted away not only any convex polygon, but any collider type that implements FindFurthestPoint into a single function that we can use in the algorithm.</p>
-		<h2 class="article-subtitle mark-section" id=GJK:>
+		<h2 class="article-subtitle mark-section" id="GJK:">
 			GJK: Surrounding the origin
 			<a class="article-subtitle-id-link" href="#GJK:">#</a>
 		</h2>

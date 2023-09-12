@@ -41,12 +41,12 @@
 	
 		<div class="page">
 			<h1 class="page-title">Designing a physics engine</h1><p>By coincidence, right when The Cherno announced his game engine series I was just starting to get going on my own engine. I couldn't wait to finally have a professional opinion on how to make one. With self-taught programming it's hard to not doubt yourself constantly, wondering if you are doing things right or just think you are.</p><p>Recently, he has been posting videos about huge aspects of his engine like physics and entity systems, which were what I really wanted to learn about by making myself, but he ended up using libraries instead of going through the internals! I am not against using libraries, but to use them for the fun stuff? I felt like it defeated the point of making a custom engine series.</p><p>There is an argument to be made about saving time, but this was the first C++ project that I was making and the goal from the start was to go through all the major pillars of an engine: input, graphics, physics, entities, and audio. I wanted to learn how those things worked along with C++ and code design in general.</p><p>I bet that some other people are interested in the details of how these systems work, and I want to learn how to explain code better, so I am going to try and make some videos going over the internals of these systems. They end up being much simpler than at first glance.</p>
-		<h2 class="article-subtitle mark-section" id=Let's>
+		<h2 class="article-subtitle mark-section" id="Let's">
 			Let's start with the physics engine...
 			<a class="article-subtitle-id-link" href="#Let's">#</a>
 		</h2>
 	<p>Physics engines are responsible for figuring out where each object in a scene is over time. Objects can collide with one another, then choose to respond in several ways. It's a generic problem that the user can configure at several different levels. Do they want a collider? Do they want to respond to collisions? Do they want to simulate dynamics? They could want dynamics, but not gravity. It's a problem that calls for good planning and robust design.</p><p>I looked at how bullet and box2d went about sorting their engines and concluded that the way bullet went about it was solid. I boiled it down to just what was needed, and based my design around that. There are already some great articles going over the hard math involved, so I am going to focus on the design aspect instead because I haven't seen anyone do that, and it's also a real headache.</p><p>At the current moment, this physics engine is not fully featured, but in future articles I plan to build it out further. This article will not cover rotation, multiple contact point collisions, or constrained simulation. I think it will work out for the best as it's easy to get overwhelmed, and I want to ease into those topics. With that out of the way, let's dive into the different parts of a physics engine.</p><p>The problem can be split into 2 or 3 pieces, dynamics, collision detection, and collision response. I'll start with dynamics because it is by far the simplest.</p>
-		<h2 class="article-subtitle mark-section" id=Dynamics>
+		<h2 class="article-subtitle mark-section" id="Dynamics">
 			Dynamics
 			<a class="article-subtitle-id-link" href="#Dynamics">#</a>
 		</h2>
@@ -115,7 +115,7 @@
 			<img class="article-embed-thumb" src="../thumbnails/sHZEs-oQTI4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/sHZEs-oQTI4?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>You can do a lot with this, but it's the easy part to be honest, and that's not what you came for...</p>
-		<h2 class="article-subtitle mark-section" id=Collision>
+		<h2 class="article-subtitle mark-section" id="Collision">
 			Collision detection
 			<a class="article-subtitle-id-link" href="#Collision">#</a>
 		</h2>
@@ -457,7 +457,7 @@
 </span></pre>
 		</div>
 	<p>This is looking good. Because of the way we constructed TestCollision, we don't need to know anything about the colliders, and using a break in the for loop gives us the unique pairs, so we never check the same objects twice.</p><p>Now that we have detected a collision, we need some way to react to it.</p>
-		<h2 class="article-subtitle mark-section" id=Collision>
+		<h2 class="article-subtitle mark-section" id="Collision">
 			Collision Response
 			<a class="article-subtitle-id-link" href="#Collision">#</a>
 		</h2>
@@ -507,7 +507,7 @@
 			<img class="article-embed-thumb" src="../thumbnails/Q_KAqCmEgyA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/Q_KAqCmEgyA?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	
-		<h2 class="article-subtitle mark-section" id=More>
+		<h2 class="article-subtitle mark-section" id="More">
 			More Options
 			<a class="article-subtitle-id-link" href="#More">#</a>
 		</h2>

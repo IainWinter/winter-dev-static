@@ -45,7 +45,7 @@
 			<img class="article-embed-thumb" src="../thumbnails/wZJCQQPaGZI.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/wZJCQQPaGZI?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>Simulating falling sand is no different from any other cellular automata. We have a big gird of cells and a set of rules that get applied to each cell every frame. You've probably heard of the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>. In that cellular automata, the rules are based on the number of neighbors surrounding a cell. For falling sand, we mostly look at if there is empty space below a cell for it to move into. This creates the look of particles cascading down.</p><p>One of the more interesting aspects of cellular automata is how complex behavior can emerge from such simple rules. That sounds like an interesting project could be created from only a few lines of code! Let's look at how you could go about making one of these in the Java version of Processing. You can download Processing <a class="underline" target="_blank" href="https://processing.org/">here</a> if you want to follow along.</p>
-		<h2 class="article-subtitle mark-section" id=Java>
+		<h2 class="article-subtitle mark-section" id="Java">
 			Java version
 			<a class="article-subtitle-id-link" href="#Java">#</a>
 		</h2>
@@ -167,7 +167,7 @@
 			<img class="article-embed-thumb" src="../thumbnails/rh_AZGzRTcQ.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/rh_AZGzRTcQ?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>The band aid solution in this Processing version comes from the subtle details of how the pixel array works. In the helper functions we read and write to the pixels array, but in draw we use the get function. Even though the docs don't say this, get must read from the displayed pixels array, which we don't update until we call updatePixels. This allows us to dodge the issue of updating particles multiple times because nothing updates until the end of the frame from get's perspective.</p><p>The second problem we can only mitigate. In isEmpty we don't use get because we want information about the current frame as it updates. If we used get, two particles could both think a cell is empty, move in, and one would be lost. Even though we've somewhat fixed that issue, the order of iteration still matters. Now the order on the X axis determines who moves in first, so we still have inconsistent behavior.</p><img class="article-embed article-embed-half" src="../articles/falling-sand-simulations/conflict.png"></img><p>Now that we have an idea of how the basics work, and common pitfalls, let's jump over to C++ and see how these can be solved.</p>
-		<h2 class="article-subtitle mark-section" id=C++>
+		<h2 class="article-subtitle mark-section" id="C++">
 			C++ Version
 			<a class="article-subtitle-id-link" href="#C++">#</a>
 		</h2>
