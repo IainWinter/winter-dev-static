@@ -2,6 +2,7 @@ gCodeStyles = {
 	'w': 'code-w', # fields / namespaces  -> white
 	's': 'code-s', # symbol               -> grey  
 	'a': 'code-a', # argument             -> dark  
+	'n': 'code-n', # namespace            -> a shade lighter than grey
 	'v': 'code-v', # local variable       -> light-blue
 	'c': 'code-c', # comment              -> green
 	'r': 'code-r', # reserved             -> purple
@@ -21,8 +22,8 @@ gAutoStylesCpp = {
 	'{': 's', '}': 's',
 	'<': 's', '>': 's',
 	'+': 's', '-': 's', '*': 's', '/': 's', '^': 's', '!': 's', '=': 's',
-	'&': 's', '*': 's', '&': 's', '|': 's',
-	',': 's', '.': 's', ':': 's', ':': 's',
+	'&': 's', '*': 's', '&': 's', '|': 's', '%': 's',
+	',': 's', '.': 's', ';': 's', ':': 's',
 	'?': 's',
 
 	'"': 'q',
@@ -30,7 +31,7 @@ gAutoStylesCpp = {
 
 	'::': 's', 'and': 's', 'or': 's',
 
-	'std': 'w',
+	'std': 'n',
 	
 	'if': 'j',
 	'else': 'j',
@@ -74,6 +75,7 @@ gAutoStylesCpp = {
 	'override': 'r',
 	'using': 'r',
 	'inline': 'r',
+	'sizeof': 'r',
 
 	'operator': 'r',
 	'operator=': 's',
@@ -81,6 +83,9 @@ gAutoStylesCpp = {
 	'operator&': 's',
 
 	'size_t': 't',
+	'uint64_t': 't',
+	'uint32_t': 't',
+
 	'vector': 't',
 	'pair': 't',
 	'tuple': 't',
@@ -97,6 +102,9 @@ gAutoStylesCpp = {
 
 	'#define': 'a',
 	'#include': 'a',
+	'#pragma once': 'a',
+
+	'FLT_MAX': 'p',
 
 	'0b': 'd',
 
@@ -111,7 +119,10 @@ gAutoStylesCpp = {
 
 	'dot': 'f',
 	'normalized': 'f',
+	'clamp': 'f',
 	'cross': 'f',
+	'sin': 'f',
+	'cos': 'f',
 }
 
 gAutoStylesProcessing = {
@@ -225,7 +236,12 @@ def isDigit(source: str, index: int) -> bool:
 		or char == '6'  \
 		or char == '7'  \
 		or char == '8'  \
-		or char == '9'
+		or char == '9'  \
+		or char == '.'  \
+		or char == 'f'  \
+		or char == 'd'  \
+		or char == 'l'  \
+		or char == 'u'  \
 
 # return the longest string in against which is a prefix for the string at source[index]
 # there can only be a single match
@@ -293,6 +309,7 @@ def findLongestMatch(source: str, index: int, against) -> str:
 def insertAutoStyles(codeTemplate: str, styles) -> str:
 	out = ''
 	inComment = 0
+	inString = False
 
 	code_template_len = len(codeTemplate)
 	cIndex = -1
@@ -301,7 +318,14 @@ def insertAutoStyles(codeTemplate: str, styles) -> str:
 			break
 		cIndex += 1
 
-		# if found # disable until new line
+		# if found " disable until next "
+
+		if codeTemplate[cIndex] == '"':
+			inString = not inString
+			if inString:
+				out += '`l`'
+
+		# if found // disable until new line
 		# if found /* disable until the same number of */ have been found
 
 		if cIndex + 1 < len(codeTemplate):
@@ -317,7 +341,7 @@ def insertAutoStyles(codeTemplate: str, styles) -> str:
 			if (inComment > 0) and ( (c0 == '\n') or (c0 == '*' and c1 == '/')):
 				inComment -= 1
 
-		if inComment != 0:
+		if inComment != 0 or inString:
 			out += codeTemplate[cIndex]
 			continue
 

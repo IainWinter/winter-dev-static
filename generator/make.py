@@ -137,6 +137,17 @@ config = {
 			}
 		},
 
+		# support page
+
+		{
+			"outdir": "",
+			"template": "./content/support_template.html",
+			"render": "winterdev_render_support",
+			"meta": {
+				"slug": "support"
+			}
+		},
+
 		# subscriber project
 		{
 			"outdir": "projects/",

@@ -1,101 +1,107 @@
+let themeStroke = 0;
+
 function defineSketch(initializer, generator) {
 	return function(sketch) {
-		let mesh = undefined;
-		let img  = undefined;
-		let useImg = false;
+		sketch.mesh = undefined;
+		sketch.inputs = [];
 
-		sketch.setup = () => {
-			sketch.createCanvas(350, 350, sketch.WEBGL);
-			sketch.setAttributes('antialias', true);
+		sketch.setup = function() {
+			sketch.createCanvas(500, 500, sketch.WEBGL);
+			sketch.frameRate(30);
+			sketch.noFill();
+			sketch.smooth();
+			
+			let inputs = initializer(sketch);
 
-			img = sketch.loadImage("/prims/imgs/uv.png");
+			for (let input of inputs) {
+				sketch.inputs.push({
+					input: input,
+					value: input.value(),
+				});
+			}
+		}
 
-			if(initializer !== undefined) {
-				let sliders = initializer(sketch);
-				for(let i in sliders) {
-					sliders[i].input(update);
+		sketch.draw = function() {
+			let regenerateMesh = sketch.mesh === undefined;
+
+			for (let input of sketch.inputs) {
+				let value = input.input.value(); // compare against cache. This stinks idk 
+				if (input.value != value) {      // how to use .changed as it only gets called on drag end
+					input.value = value;
+					regenerateMesh = true;
 				}
 			}
-		}
 
-		sketch.draw = () => {
-
-			// if(sketch.keyIsDown(85)) {
-			// 	useImg = !useImg;
-			// }
-
-			if(sketch.frameCount > 3 && 1/(sketch.deltaTime*1000) > sketch.frameRate()*2) {
-				sketch.frameRate(sketch.frameRate() * 0.9);
+			if (regenerateMesh) {
+				sketch.mesh = generator(sketch);
 			}
 
-			if(mesh == undefined) {
-				mesh = generator(sketch);
-				console.log(mesh[0].length, mesh[1].length);
-			}
+			let angle = sketch.frameCount/120/sketch.PI;
 
-			let index = mesh[0];
-			let verts = mesh[1];
-			let uvs   = mesh[2];
-			let scale = mesh.length > 3 ? mesh[3] : 1.0;
-
-			sketch.camera(0, 0, 200, 0, 0, 0, 0, 1, 0);
+			sketch.camera(0, 0, 150, 0, 0, 0, 0, 1, 0);
+			sketch.scale(50);
 
 			sketch.clear();
-			sketch.noFill();
-			sketch.stroke(245);
+			
+			sketch.rotateX(angle);
+			sketch.rotateY(angle);
+			//sketch.rotateZ(angle);
+			
+			sketch.stroke(themeStroke);
 
-			sketch.rotateY(sketch.frameCount/120/sketch.PI);
-			sketch.rotateX(sketch.PI/6);
-
-			sketch.rotateZ(sketch.frameCount/120/sketch.PI);
-
-			sketch.scale(100 * scale);
-
-			drawIndexedList(sketch, useImg ? img : undefined, index, verts, uvs);
-		}
-
-		let update = () => {
-			mesh = undefined;
+			drawIndexedList(sketch, sketch.mesh[0], sketch.mesh[1]);
 		}
 	};
 }
 
-function startSketch(initializer, generator, id) {
-	new p5(defineSketch(initializer, generator), id);
+function startSketch(initializer, generator, populateTable, id) {
+	// assume that this is on a page with a table with id 'shape-table'
+	// and its the only table
+
+	// this is removed
+	// let tableDOM = document.getElementById('shape-table');
+
+	// if (tableDOM) {
+	// 	let table = populateTable();
+
+	// 	for (let row of table) {
+	// 		let rowDOM = tableDOM.insertRow(-1); // Insert a new row at the end of the table
+
+	// 		for (let cell of row) {
+	// 			let cellDOM = rowDOM.insertCell();
+	// 			cellDOM.innerHTML = cell;
+	// 		}
+	// 	}
+	// }
+
+	return new p5(defineSketch(initializer, generator), id);
 }
 
-function drawIndexedList(sketch, img, index, verts, uvs) {
-	sketch.beginShape(sketch.TRIANGLES);
-	
-	if(img == undefined) {
-		sketch.noFill();
-	}
-
-	else {
-		sketch.texture(img);
-	}
-
+function drawIndexedList(sketch, index, verts) {
 	for(let i = 0; i < index.length; i+=3) {
 		let p1 = verts[index[i]];
 		let p2 = verts[index[i + 1]];
 		let p3 = verts[index[i + 2]];
 
-		let uv1 = uvs[index[i]];
-		let uv2 = uvs[index[i + 1]];
-		let uv3 = uvs[index[i + 2]];
-
-		if(img == undefined) {
-			sketch.vertex(p1.x, p1.y, p1.z);
-			sketch.vertex(p2.x, p2.y, p2.z);
-			sketch.vertex(p3.x, p3.y, p3.z);
-		}
-
-		else {
-			sketch.vertex(p1.x, p1.y, p1.z, uv1.x*1024, uv1.y*1024);
-			sketch.vertex(p2.x, p2.y, p2.z, uv2.x*1024, uv2.y*1024);
-			sketch.vertex(p3.x, p3.y, p3.z, uv3.x*1024, uv3.y*1024);
-		}
+		sketch.line(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+		sketch.line(p1.x, p1.y, p1.z, p3.x, p3.y, p3.z);
+		sketch.line(p2.x, p2.y, p2.z, p3.x, p3.y, p3.z); // draws every line 3 times, could do better
 	}
-
-	sketch.endShape();
 }
+
+function addTool(shapeId, toolName, tool) {
+	let div = document.createElement('div');
+	div.classList = ["shape-tool"];
+	div.innerHTML = `<p>${toolName}</p>`
+	div.appendChild(tool.elt);
+	
+	let shapeDOM = document.getElementById(`${shapeId}-tools`);
+	shapeDOM.appendChild(div);
+}
+
+function setThemeStroke(theme) {
+	themeStroke = theme == "light" ? 0 : 245;
+}
+
+setThemeStroke(localStorage.getItem("theme"));
+subscribeToThemeChange(setThemeStroke);

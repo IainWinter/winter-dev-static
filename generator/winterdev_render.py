@@ -48,6 +48,18 @@ def winterdev_render_article(template: str, slug: str, context: dict) -> str:
 	render = render_template(template, {
 		"article": lambda io: raw_html(io, content_render),
 		"name": lambda io: raw_html(io, page["title"]),
+		"comments": lambda io: comments_html(io, page["slug"]),
+		"vars": vars,
+		"top": top,
+	})
+
+	return render
+
+def winterdev_render_support(template: str, slug: str, context: dict) -> str:
+	page = context[slug]
+
+	render = render_template(template, {
+		"comments": lambda io: comments_html(io, page["slug"]),
 		"vars": vars,
 		"top": top,
 	})

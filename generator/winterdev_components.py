@@ -125,6 +125,16 @@ def br(io):
 
 # names with _html are not direct functions, but ones that need inputs from the context
 
+def comments_html(io, slug):
+	io.write(f'''
+		<div class="article-comment-section">
+			<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
+			<br />
+			<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="{ref(f'~/external/comments.html?host=https://api.winter.dev/comments&subject={slug}')}"></iframe>
+			<script src="{ref("~/scripts/resize_comment_section.js")}"></script>
+		</div>
+	''')
+
 def raw_html(io, text):
 	io.write(text)
 
@@ -197,14 +207,12 @@ def shapes_html(io, shape_names, context):
 
 
 def shape_title_html(io, title):
-	io.write(f'<h1 class="page-title">Mesh / {title}</h1>')
+	io.write(f'<h1 class="page-title"><a href="{ref_page("/projects/mesh")}">Mesh</a> / {title}</h1>')
 
 def shape_tools_html(io, shape):
 	io.write(f'''
-		<div class="shape-side-panel-top">
-			<div id="{shape["id"]}"></div>
-			<h3 class="shape-side-panel-name">{shape["title"]}</h3>
-			<div id="{shape["id"]}-tools"></div>
-		</div>
-		<table id="shape-table" class="shape-side-panel-table"></table>
+		<div id="{shape["id"]}"></div>
+		<div id="{shape["id"]}-tools"></div>
 	''')
+	#<h3 class="shape-side-panel-name">{shape["title"]}</h3>
+	#<table id="shape-table" class="shape-side-panel-table"></table>

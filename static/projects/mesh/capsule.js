@@ -114,4 +114,4 @@ function getCapsuleTable() {
 	return table;
 }
 
-startSketch(initCapsule, makeCapsule, 'capsule');
+startSketch(initCapsule, makeCapsule, getCapsuleTable, 'capsule');

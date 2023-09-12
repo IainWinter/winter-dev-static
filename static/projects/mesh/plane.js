@@ -57,4 +57,30 @@ function makePlane(sketch, xCount = -1, zCount = -1) {
 	return [indices, verts, uvs, 0.7];
 }
 
-startSketch(initPlane, makePlane, 'plane');
+function getPlaneTable() {
+	function v(x, z) {
+		return (x + 1) * (z + 1);
+	}
+
+	function i(x, z) {
+		return x * z * 6;
+	}
+
+	let table = [
+		["X", "Z", "Vertx", "Index"],
+		[1, 1, v(1, 1), i(1, 1)],
+		[1, 2, v(1, 2), i(1, 2)],
+		[1, 3, v(1, 3), i(1, 3)],
+		[2, 2, v(2, 2), i(2, 2)],
+		[2, 3, v(2, 3), i(2, 3)],
+		[5, 5, v(5, 5), i(5, 5)],
+		[10, 10, v(10, 10), i(10, 10)],
+		["x", "y", 
+			'<math><mo>(</mo><mi>x</mi><mo>*</mo><mi>y</mi><mo>)</mo><mo>*</mo><mn>6</mn></math>', 
+			'<math><mo>(</mo><mi>x</mi><mo>+</mo><mn>1</mn><mo>)</mo><mo>*</mo><mo>(</mo><mi>y</mi><mo>+</mo><mn>1</mn><mo>)</mo></math>']
+	];
+
+	return table;
+}
+
+startSketch(initPlane, makePlane, getPlaneTable, 'plane');
