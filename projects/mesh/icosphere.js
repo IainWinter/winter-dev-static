@@ -87,8 +87,9 @@ function initIcoSphere(sketch) {
 	];
 
 	slider_res = sketch.createSlider(0, 3, 1);
-  	slider_res.parent('icosphere-tools-res');
   	
+	addTool('icosphere', 'Resolution', slider_res);
+
   	return [slider_res];
 }
 
@@ -157,8 +158,30 @@ function CreateVertexForEdge(lookup, verts, uvs, first, second, currentVertCount
 		lookup[key] = myVertCount;		
 	}
 
-
 	return myVertCount;
 }
 
-startSketch(initIcoSphere, makeIcoSphere, 'icosphere');
+function getIcosphereTable() {
+	function v(x) {
+		return 22 + 60 * (1 - Math.pow(4, x)) / (1 - 4);
+	}
+
+	function i(x) {
+		return 60 * Math.pow(4, x);
+	}
+
+	let table = [
+		["Resolution", "Vertx", "Index"],
+		[1, v(1), i(1)],
+		[2, v(2), i(2)],
+		[3, v(3), i(3)],
+		[4, v(4), i(4)],
+		[5, v(5), i(5)],
+		[6, v(6), i(6)],
+		["r", "60 * 4^r", "sum(4^i, r)"]
+	];
+
+	return table;
+}
+
+startSketch(initIcoSphere, makeIcoSphere, getIcosphereTable, 'icosphere');

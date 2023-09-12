@@ -1,5 +1,5 @@
 <html lang="en">
-
+ 
 <head>
 	<title>Capsule</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,6 +7,8 @@
 	<link rel="stylesheet" href="../../styles/global.css" />
 	<link rel="stylesheet" href="../../styles/top.css" />
 	<link rel="stylesheet" href="../../styles/card.css" />
+	<link rel="stylesheet" href="../../styles/code.css" />
+	<link rel="stylesheet" href="../../styles/article.css" />
 	<link rel="stylesheet" href="../../projects/mesh/style.css">
 </head>
 
@@ -25,9 +27,9 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="../../articles.html">Articles</a>
-					<a class="nav-link" href="../../projects.html">Projects</a>
-					<a class="nav-link" href="../../support.html">Support</a>
+					<a class="nav-link" href="../../articles">Articles</a>
+					<a class="nav-link" href="../../projects">Projects</a>
+					<a class="nav-link" href="../../support">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
@@ -40,40 +42,196 @@
 		<script src="../../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
-			<h1 class="page-title">Mesh / Capsule</h1>
-			<div class="shape-article">
-				<div class="shape-article-text">
-					<p>This is a test</p>
-				</div>
-			
+			<h1 class="page-title"><a href="../..//projects/mesh">Mesh</a> / Capsule</h1>
+			<div class="draw-left-line">
+				<p class="article-code-file mark-section">Shape</p>
 				<div class="shape-side-panel">
 					
-			<div class="shape-side-panel-top">
-				<div id="capsule"></div>
-				<h3 class="shape-side-panel-name">Capsule</h3>
-		
-				<div class="shape-tool" id="capsule-tools-res">
-					<p>Resolution</p>
+		<div id="capsule"></div>
+		<div id="capsule-tools"></div>
+	
 				</div>
-			
-				<div class="shape-tool" id="capsule-tools-height">
-					<p>Height</p>
-				</div>
-			
-				<div class="shape-tool" id="capsule-tools-radius">
-					<p>Radius</p>
-				</div>
-			
 			</div>
-			<table id="shape-table" class="shape-side-panel-table"></table>
-		
-				</div>
+
+			<div class="shape-article-text">
+				
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Capsule.h</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-a">#pragma once
+
+</span><span class="code-a">#include </span><span class="code-l">"glm/vec3.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="code-l">"glm/vec2.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="code-l">"glm/geometric.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="None"></span><span class="code-l">&lt</span><span class="None"></span><span class="code-l">vector</span><span class="None"></span><span class="code-l">&gt
+
+</span><span class="code-r">using namespace </span><span class="code-n">glm</span><span class="code-s">;
+
+</span><span class="code-r">struct </span><span class="code-t">Capsule </span><span class="code-s">{
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-w">index</span><span class="code-s">;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">pos</span><span class="code-s">;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec2</span><span class="code-s">&gt </span><span class="code-w">uvs</span><span class="code-s">;
+</span><span class="code-s">}</span><span class="code-s">;
+
+</span><span class="code-t">Capsule </span><span class="None"></span><span class="code-f">MakeCapsule</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">resolution</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">height</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">radius</span><span class="code-s">)</span><span class="code-s">;
+</span></pre>
+		</div>
+	
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Capsule.cpp</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-a">#include </span><span class="code-l">"capsule.h</span><span class="code-q">"
+
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-r">float </span><span class="code-n">pi </span><span class="code-s">= </span><span class="code-d">3.1415927f</span><span class="code-s">;
+
+</span><span class="code-t">Capsule </span><span class="None"></span><span class="code-f">MakeCapsule</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">resolution</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">height</span><span class="code-s">, </span><span class="code-r">float </span><span class="code-a">radius</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">resolution </span><span class="code-s">&lt </span><span class="code-d">2</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-s">{</span><span class="code-s">}</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Almost same generation as UV sphere but we force the
+	</span><span class="code-c">// lat count to be odd so it can be split evenly
+
+	</span><span class="code-r">int </span><span class="code-v">latCount </span><span class="code-s">= </span><span class="code-a">resolution</span><span class="code-s">;
+	</span><span class="code-r">int </span><span class="code-v">lonCount </span><span class="code-s">= </span><span class="code-a">resolution</span><span class="code-s">;
+
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">latCount </span><span class="code-s">% </span><span class="code-d">2 </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">latCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Each longitudinal count makes two triangles (6 indices) for every
+	</span><span class="code-c">// lateral count except for the top and bottom poles, which only make
+	</span><span class="code-c">// one triangle per longitudinal count.
+
+	</span><span class="code-c">// UV maps require two vertices with the same position, but different UVs
+	</span><span class="code-c">// so we need counts + 1.
+
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">totalIndexCount </span><span class="code-s">= </span><span class="code-d">6 </span><span class="code-s">* </span><span class="code-s">(</span><span class="code-v">latCount </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-v">lonCount</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">totalVertexCount </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-v">latCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-s">(</span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">latStep </span><span class="code-s">= </span><span class="code-n">pi </span><span class="code-s">/ </span><span class="code-v">latCount</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">lonStep </span><span class="code-s">= </span><span class="code-d">2 </span><span class="code-s">* </span><span class="code-n">pi </span><span class="code-s">/ </span><span class="code-v">lonCount</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">zOffset </span><span class="code-s">= </span><span class="code-f">clamp</span><span class="code-s">(</span><span class="code-a">height </span><span class="code-s">/ </span><span class="code-d">2.0f </span><span class="code-s">- </span><span class="code-a">radius</span><span class="code-s">, </span><span class="code-d">0.0f</span><span class="code-s">, </span><span class="code-p">FLT_MAX</span><span class="code-s">)</span><span class="code-s">;
+
+	</span><span class="code-t">Capsule </span><span class="code-v">capsule</span><span class="code-s">;
+
+	</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalIndexCount</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalVertexCount</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalVertexCount</span><span class="code-s">)</span><span class="code-s">;
+
+	</span><span class="code-r">int </span><span class="code-v">currentVertex </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">;
+	</span><span class="code-r">int </span><span class="code-v">currentIndex </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">;
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">lat </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">lat </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-v">latCount</span><span class="code-s">; </span><span class="code-v">lat</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-r">float </span><span class="code-v">offset </span><span class="code-s">= </span><span class="code-v">lat </span><span class="code-s">&gt </span><span class="code-v">latCount </span><span class="code-s">/ </span><span class="code-d">2 </span><span class="code-s">? </span><span class="code-v">zOffset </span><span class="code-s">: </span><span class="code-s">-</span><span class="code-v">zOffset</span><span class="code-s">;
+
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">lon </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">lon </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-v">lonCount</span><span class="code-s">; </span><span class="code-v">lon</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[</span><span class="code-v">currentVertex</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(
+				</span><span class="code-f">cos</span><span class="code-s">(</span><span class="code-v">lon </span><span class="code-s">* </span><span class="code-v">lonStep</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-f">sin</span><span class="code-s">(</span><span class="code-v">lat </span><span class="code-s">* </span><span class="code-v">latStep</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-a">radius</span><span class="code-s">,
+				</span><span class="code-f">sin</span><span class="code-s">(</span><span class="code-v">lon </span><span class="code-s">* </span><span class="code-v">lonStep</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-f">sin</span><span class="code-s">(</span><span class="code-v">lat </span><span class="code-s">* </span><span class="code-v">latStep</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-a">radius</span><span class="code-s">,
+				</span><span class="code-f">cos</span><span class="code-s">(</span><span class="code-v">lat </span><span class="code-s">* </span><span class="code-v">latStep </span><span class="code-s">- </span><span class="code-n">pi</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-a">radius </span><span class="code-s">+ </span><span class="code-v">offset
+			</span><span class="code-s">)</span><span class="code-s">;
+
+			</span><span class="code-c">// UVs are almost the same as the UV sphere, but V needs 
+			</span><span class="code-c">// to be scaled to fit the height
+
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">[</span><span class="code-v">currentVertex</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-t">vec2</span><span class="code-s">(
+				</span><span class="code-s">(</span><span class="code-r">float</span><span class="code-s">)</span><span class="code-v">lon </span><span class="code-s">/ </span><span class="code-v">lonCount</span><span class="code-s">,
+				</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[</span><span class="code-v">currentVertex</span><span class="code-s">]</span><span class="code-d">.</span><span class="code-w">z </span><span class="code-s">/ </span><span class="code-s">(</span><span class="code-a">radius </span><span class="code-s">* </span><span class="code-d">2 </span><span class="code-s">+ </span><span class="code-a">height</span><span class="code-s">) </span><span class="code-s">+ </span><span class="code-d">0.5f
+			</span><span class="code-s">)</span><span class="code-s">;
+
+			</span><span class="code-v">currentVertex </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">;
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Top cap
+	</span><span class="code-c">//
+	</span><span class="code-c">// One triangle connects the first lateral layer to the second per longitudinal count.
+	</span><span class="code-c">// Even though the top points all have the same position, their UVs are different,
+	</span><span class="code-c">// so each triangle uses a different point.
+	</span><span class="code-c">//
+	</span><span class="code-c">//          -------- lonCount --------&gt
+	</span><span class="code-c">//                      lon
+	</span><span class="code-c">//    |                  *
+	</span><span class="code-c">//    |                / | \
+	</span><span class="code-c">//    1             /    |    \
+	</span><span class="code-c">//    |          /       |       \
+	</span><span class="code-c">//    |       /                     \
+	</span><span class="code-c">//   \ /     *------------*------------*
+	</span><span class="code-c">//          v          v + 1      (v + 1) + 1
+
+	</span><span class="code-r">int </span><span class="code-v">v </span><span class="code-s">= </span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">lon </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">lon </span><span class="code-s">&lt </span><span class="code-v">lonCount</span><span class="code-s">; </span><span class="code-v">lon</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">lon</span><span class="code-s">;
+		</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v</span><span class="code-s">;
+		</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+
+		</span><span class="code-v">v </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Middle
+	</span><span class="code-c">//
+	</span><span class="code-c">// Each lateral layer has 2 triangles for every longitudinal count.
+	</span><span class="code-c">//
+	</span><span class="code-c">//          -------- lonCount --------&gt
+	</span><span class="code-c">//          v          v + 1      (v + 1) + 1
+	</span><span class="code-c">//    |     *------------*------------*
+	</span><span class="code-c">//    |     |          / |          / |
+	</span><span class="code-c">// latCount |       /    |       /    |
+	</span><span class="code-c">//    |     |    /       |    /       |
+	</span><span class="code-c">//    |     | /          | /          |
+	</span><span class="code-c">//   \ /    *------------*------------*
+	</span><span class="code-c">//      v + lc + 1   v + lc + 2   (v + 1) + lc + 2
+
+	</span><span class="code-v">v </span><span class="code-s">= </span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">lat </span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">; </span><span class="code-v">lat </span><span class="code-s">&lt </span><span class="code-v">latCount </span><span class="code-s">- </span><span class="code-d">1</span><span class="code-s">; </span><span class="code-v">lat</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">lon </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">lon </span><span class="code-s">&lt </span><span class="code-v">lonCount</span><span class="code-s">; </span><span class="code-v">lon</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v</span><span class="code-s">;
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+			</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">;
+
+			</span><span class="code-v">v </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">;
+		</span><span class="code-s">}
+
+		</span><span class="code-v">v </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Bottom cap
+
+	</span><span class="code-c">// Same as top cap, but reversed.
+	</span><span class="code-c">//
+	</span><span class="code-c">//          -------- lonCount --------&gt
+	</span><span class="code-c">//          v          v + 1      (v + 1) + 1
+	</span><span class="code-c">//    |     *------------*------------*
+	</span><span class="code-c">//    |       \          |          /
+	</span><span class="code-c">//    1          \       |       /
+	</span><span class="code-c">//    |             \    |    /
+	</span><span class="code-c">//    |                \ | /
+	</span><span class="code-c">//   \ /                 *
+	</span><span class="code-c">//                   v + lc + 1
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">lon </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">lon </span><span class="code-s">&lt </span><span class="code-v">lonCount</span><span class="code-s">; </span><span class="code-v">lon</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v</span><span class="code-s">;
+		</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-v">lonCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+		</span><span class="code-v">capsule</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndex</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+
+		</span><span class="code-v">v </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-j">return </span><span class="code-v">capsule</span><span class="code-s">;
+</span><span class="code-s">}
+</span></pre>
+		</div>
+	
 			</div>
 		</div>
 	</div>
 
 	<script src="../../projects/mesh/p5.min.js"></script>
-	<script src="../../projects/mesh/script.js"></script>
+	<script src="../../projects/mesh/draw_shape.js"></script>
 	<script src="../../projects/mesh/capsule.js"></script>
 </body>
 

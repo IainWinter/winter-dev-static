@@ -1,20 +1,21 @@
 <html lang="en">
 
 <head>
-	<title>Mesh Generation Algorithms</title>
+	<title>Projects</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<link rel="icon" type="image/x-icon" href="../favicon.ico">
-	<link rel="stylesheet" href="../styles/global.css" />
-	<link rel="stylesheet" href="../styles/top.css" />
+	<link rel="icon" type="image/x-icon" href="./favicon.ico">
+	<link rel="stylesheet" href="./styles/global.css" />
+	<link rel="stylesheet" href="./styles/top.css" />
+	<link rel="stylesheet" href="./styles/card.css" />
 </head>
 
 
 		<script>
-			const g_exportRootPath = "../";
+			const g_exportRootPath = "./";
 			function ref(path) { return g_exportRootPath + path; }
 		</script>
 	
-<script src="../scripts/no_flashbang.js"></script>
+<script src="./scripts/no_flashbang.js"></script>
 
 <body color-theme="dark">
 	<div class="main">
@@ -23,78 +24,39 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="../articles.html">Articles</a>
-					<a class="nav-link" href="../projects.html">Projects</a>
-					<a class="nav-link" href="../support.html">Support</a>
+					<a class="nav-link" href="./articles">Articles</a>
+					<a class="nav-link" href="./projects">Projects</a>
+					<a class="nav-link" href="./support">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="../icons/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="./icons/light_off.svg" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
-		<script src="../scripts/toggle_dark.js"></script>
+		<script src="./scripts/toggle_dark.js"></script>
 	
-		<div class="page full-page">
-			<h1 class="page-title">Mesh Generation Algorithms</h1>
-			
-
-<div class="shapes">
+		<div class="page">
+			<h1 class="page-title">Projects</h1>
+			<div>
+		<div class="article-card">
+			<a href=./projects/subscribers><img class="article-card-thumb" src="./thumbnails/GLNI8zcn05c.jpg" /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=./projects/subscribers>Subscriber Tracker</a>
+				<p class="article-card-text-date">April 21, 2021</p>
+			</div>
+		</div>
 	
-
-	<div class="shape">
-		<div id="plane"></div>
-		<p class="shape-title">Plane</p>
-		<div class="shape-tool" id="plane-tools-resX"><p>Resolution X</p></div>
-		<div class="shape-tool" id="plane-tools-resZ"><p>Resolution Z</p></div>
-	</div>
-
-	<div class="shape">
-		<div id="capsule"></div>
-		<a class="shape-title" href="/projects/mesh/capsule">Capsule</a>
-		<div class="shape-tool" id="capsule-tools-res">
-			<p>Resolution Y</p>
-		</div>
-		<div class="shape-tool" id="capsule-tools-height">
-			<p>Height</p>
-		</div>
-		<div class="shape-tool" id="capsule-tools-radius">
-			<p>Radius</p>
+		<div class="article-card">
+			<a href=./projects/mesh><img class="article-card-thumb" src="./thumbnails/prims.jpg" /></a>
+			<div class="article-card-text">
+				<a class="article-card-text-link" href=./projects/mesh>Mesh Generation Algorithms</a>
+				<p class="article-card-text-date">April 21, 2021</p>
+			</div>
 		</div>
 	</div>
-
-	<div class="shape">
-		<div id="uvsphere"></div>
-		<p class="shape-title">UV Sphere</p>
-		<div class="shape-tool" id="uvsphere-tools-resLon">
-			<p>Resolution Longitude</p>
-		</div>
-		<div class="shape-tool" id="uvsphere-tools-resLat">
-			<p>Resolution Latitude</p>
-		</div>
-	</div>
-
-	<div class="shape">
-		<div id="icosphere"></div>
-		<p class="shape-title">Icosphere</p>
-		<div class="shape-tool" id="icosphere-tools-res">
-			<p>Resolution</p>
-		</div>
-	</div>
-</div>
-
-<link rel="stylesheet" href="../projects/mesh/style.css">
-
-<script src="../projects/mesh/p5.min.js"></script>
-<script src="../projects/mesh/script.js"></script>
-
-<script src="../projects/mesh/plane.js"></script>
-<script src="../projects/mesh/capsule.js"></script>
-<script src="../projects/mesh/uvsphere.js"></script>
-<script src="../projects/mesh/icosphere.js"></script>
-<script src="../projects/mesh/page.js"></script>
 		</div>
 	</div>
 </body>

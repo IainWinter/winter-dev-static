@@ -25,9 +25,9 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="../articles.html">Articles</a>
-					<a class="nav-link" href="../projects.html">Projects</a>
-					<a class="nav-link" href="../support.html">Support</a>
+					<a class="nav-link" href="../articles">Articles</a>
+					<a class="nav-link" href="../projects">Projects</a>
+					<a class="nav-link" href="../support">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
@@ -41,85 +41,85 @@
 	
 		<div class="page">
 			<h1 class="page-title">GJK: Collision detection algorithm in 2D/3D</h1>
-			<span class="article-embed article-embed-thumb-yt-icon">
-				<img class="article-embed-thumb" src="../thumbnails/MDusDn8oTSE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MDusDn8oTSE?rel=0&modestbranding=1&autoplay=1')"></img>
-			</span>
-		<p>In my last article, I only covered sphere vs. sphere collisions because they are the simplest to compute. Spheres are nice and all, but there comes a time when more complex shapes are needed. One popular algorithm for testing collisions is the Gilbert-Johnson-Keerthi algorithm, or GJK for short. With it we can detect collisions between any two convex polygons.</p><p>The GJK algorithm is very useful and widely used, but no good visualization or concise explanations exist for some reason. A few years ago, I listened and relistened to a video by <a class="underline" target="_blank" href="https://www.youtube.com/watch?v=Qupqu1xe7Io">Casey Muratori</a> that explains the algorithm in great detail and goes through some smart insights that give a good mental image of how it works. Yet I have found no full interactive visualizations. Let's jump into it!</p>
-			<h2 class="article-subtitle mark-section" id=Difference>
-				Difference between spheres and polygons
-				<a class="article-subtitle-id-link" href="#Difference">#</a>
-			</h2>
-		<p>Testing for a collision between spheres is easy because there are only two points in the system. This leaves us with a single vector that we can compare against the sum of their radii to determine if there is a collision.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/circles.html"></iframe><p>With polygons we cannot make such simplifications. They are made from multiple vertices, removing any apparent way of finding their distance and clear radius property to compare against. We need a smarter way of testing for a collision.</p><p>Like we subtracted the points in the sphere system, let's see what happens if we subtract the vertices of the polygons.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/sub_poly.html"></iframe><p>Subtracting two polygons with the same number of vertices is straightforward, but if we want to support various polygons, we need to subtract each vertex from every vertex on the other polygon. Because there are multiple vertices, we are not left with a single vector, but many that form another polygon. This results in a cloud of <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number vertices that we need to process further to select the outer convex hull from.</p><p>This outer hull is known as the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Minkowski_addition">Minkowski difference</a>. It represents the distance between every point of the two polygons. We are going to use it to turn two polygons into one that we can analyze to detect a collision. The key is that if the origin is inside the difference, there must have been two points that subtracted to 0; meaning there is overlap somewhere.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/mink_diff.html"></iframe>
-			<h2 class="article-subtitle mark-section" id=Abstracting>
-				Abstracting shapes into supporting points
-				<a class="article-subtitle-id-link" href="#Abstracting">#</a>
-			</h2>
-		<p>The Minkowski difference is nice for visualization, but far too expensive to compute in real time; we need a way to simplify it.</p><p>The GJK algorithm is only concerned with the outer hull of our cloud of vertices, so it would give a substantial speed up if we could cut down on the time spent finding them. Let's think about what puts a vertex on the hull. If we look closer, notice that those vertices have the most extreme components. They got to their locations from subtraction between two other vertices, so for one to be the most extreme, it must have come from the most extreme vertices on the source polygons. If we define 'most extreme' as the furthest in some direction, we can play with the math to get this speed increase.</p><p>Finding the furthest vertex is done by iterating over the set of vertices and finding the one with the largest dot product in a direction. Let <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover><mi>D</mi><mo stretchy="true">&#x02192;</mo></mover></mrow></math></span> be the direction and <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> be the cloud of vertices.</p>
-			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mo stretchy="false">&#x00028;</mo><mi>A</mi><mo>&#x02212;</mo><mi>B</mi><mo stretchy="false">&#x00029;</mo></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
-			</div>
-	   <p>Computing <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> took <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number of steps; making this function an <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>O</mi><mo stretchy="false">&#x00028;</mo><msup><mi>n</mi><mn>2</mn></msup><mo stretchy="false">&#x00029;</mo></mrow></math></span> operation. Luckily for us, we can distribute and never have to compute the full difference.</p><p>If we distribute the dot product and max function we're left with this:</p>
-			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x0007D;</mo></mrow></math>
-			</div>
-	   
-			<div class="article-equation">
-	   			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x0007D;</mo><mo>&#x02212;</mo><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mo>&#x02212;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mo stretchy="false">&#x00029;</mo><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
-			</div>
-	   <p>Now all we need is <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002B;</mo><mi>B</mi></mrow></math></span> steps; turning our quadratic time function into a linear one.</p><p>We need to reverse the direction for <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span> when we distribute max because we want to retain the max value. We want the lest extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>B</mi></mrow></math></span> to subtract from the most extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span>.</p><img class="article-embed" src="../articles/gjk-algorithm/supports.jpg"></img><p>These vertices are referred to as <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Support_function">supporting points</a> and give a view into the Minkowski difference without ever calculating more than we need.</p><p>Let's look at the implementation -- I'm going to continue to use the Collider structs from the <a class="underline" target="_blank" href="../articles/physics-engine">physics engine</a> article for consistency, but will only include the new pieces from this article.</p><p>We'll start by adding a function that finds the support point in a given direction. Let's call it FindFurthestPoint. If we have other special types of colliders like spheres, capsules, or planes, we can override this function allowing them to be used with GJK as well.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Collider.h</p>
-				<pre class="article-code-text cpp">
+		<span class="article-embed article-embed-thumb-yt-icon">
+			<img class="article-embed-thumb" src="../thumbnails/MDusDn8oTSE.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/MDusDn8oTSE?rel=0&modestbranding=1&autoplay=1')"></img>
+		</span>
+	<p>In my last article, I only covered sphere vs. sphere collisions because they are the simplest to compute. Spheres are nice and all, but there comes a time when more complex shapes are needed. One popular algorithm for testing collisions is the Gilbert-Johnson-Keerthi algorithm, or GJK for short. With it we can detect collisions between any two convex polygons.</p><p>The GJK algorithm is very useful and widely used, but no good visualization or concise explanations exist for some reason. A few years ago, I listened and relistened to a video by <a class="underline" target="_blank" href="https://www.youtube.com/watch?v=Qupqu1xe7Io">Casey Muratori</a> that explains the algorithm in great detail and goes through some smart insights that give a good mental image of how it works. Yet I have found no full interactive visualizations. Let's jump into it!</p>
+		<h2 class="article-subtitle mark-section" id=Difference>
+			Difference between spheres and polygons
+			<a class="article-subtitle-id-link" href="#Difference">#</a>
+		</h2>
+	<p>Testing for a collision between spheres is easy because there are only two points in the system. This leaves us with a single vector that we can compare against the sum of their radii to determine if there is a collision.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/circles.html"></iframe><p>With polygons we cannot make such simplifications. They are made from multiple vertices, removing any apparent way of finding their distance and clear radius property to compare against. We need a smarter way of testing for a collision.</p><p>Like we subtracted the points in the sphere system, let's see what happens if we subtract the vertices of the polygons.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/sub_poly.html"></iframe><p>Subtracting two polygons with the same number of vertices is straightforward, but if we want to support various polygons, we need to subtract each vertex from every vertex on the other polygon. Because there are multiple vertices, we are not left with a single vector, but many that form another polygon. This results in a cloud of <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number vertices that we need to process further to select the outer convex hull from.</p><p>This outer hull is known as the <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Minkowski_addition">Minkowski difference</a>. It represents the distance between every point of the two polygons. We are going to use it to turn two polygons into one that we can analyze to detect a collision. The key is that if the origin is inside the difference, there must have been two points that subtracted to 0; meaning there is overlap somewhere.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/mink_diff.html"></iframe>
+		<h2 class="article-subtitle mark-section" id=Abstracting>
+			Abstracting shapes into supporting points
+			<a class="article-subtitle-id-link" href="#Abstracting">#</a>
+		</h2>
+	<p>The Minkowski difference is nice for visualization, but far too expensive to compute in real time; we need a way to simplify it.</p><p>The GJK algorithm is only concerned with the outer hull of our cloud of vertices, so it would give a substantial speed up if we could cut down on the time spent finding them. Let's think about what puts a vertex on the hull. If we look closer, notice that those vertices have the most extreme components. They got to their locations from subtraction between two other vertices, so for one to be the most extreme, it must have come from the most extreme vertices on the source polygons. If we define 'most extreme' as the furthest in some direction, we can play with the math to get this speed increase.</p><p>Finding the furthest vertex is done by iterating over the set of vertices and finding the one with the largest dot product in a direction. Let <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mover><mi>D</mi><mo stretchy="true">&#x02192;</mo></mover></mrow></math></span> be the direction and <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> be the cloud of vertices.</p>
+		<div class="article-equation">
+			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mo stretchy="false">&#x00028;</mo><mi>A</mi><mo>&#x02212;</mo><mi>B</mi><mo stretchy="false">&#x00029;</mo></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
+		</div>
+	<p>Computing <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x02212;</mo><mi>B</mi></mrow></math></span> took <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002A;</mo><mi>B</mi></mrow></math></span> number of steps; making this function an <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>O</mi><mo stretchy="false">&#x00028;</mo><msup><mi>n</mi><mn>2</mn></msup><mo stretchy="false">&#x00029;</mo></mrow></math></span> operation. Luckily for us, we can distribute and never have to compute the full difference.</p><p>If we distribute the dot product and max function we're left with this:</p>
+		<div class="article-equation">
+			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x00029;</mo><mo>&#x02212;</mo><mo stretchy="false">&#x00028;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x00029;</mo><mo stretchy="false">&#x0007D;</mo></mrow></math>
+		</div>
+	
+		<div class="article-equation">
+			<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mi>&#x000B7;</mi><mrow><mi>A</mi></mrow><mo stretchy="false">&#x0007D;</mo><mo>&#x02212;</mo><mo>max</mo><mo stretchy="false">&#x0007B;</mo><mo stretchy="false">&#x00028;</mo><mo>&#x02212;</mo><mover><mrow><mi>D</mi></mrow><mo stretchy="true">&#x02192;</mo></mover><mo stretchy="false">&#x00029;</mo><mi>&#x000B7;</mi><mrow><mi>B</mi></mrow><mo stretchy="false">&#x0007D;</mo></mrow></math>
+		</div>
+	<p>Now all we need is <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi><mo>&#x0002B;</mo><mi>B</mi></mrow></math></span> steps; turning our quadratic time function into a linear one.</p><p>We need to reverse the direction for <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span> when we distribute max because we want to retain the max value. We want the lest extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>B</mi></mrow></math></span> to subtract from the most extreme vertex from <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>A</mi></mrow></math></span>.</p><img class="article-embed" src="../articles/gjk-algorithm/supports.jpg"></img><p>These vertices are referred to as <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Support_function">supporting points</a> and give a view into the Minkowski difference without ever calculating more than we need.</p><p>Let's look at the implementation -- I'm going to continue to use the Collider structs from the <a class="underline" target="_blank" href="../articles/physics-engine">physics engine</a> article for consistency, but will only include the new pieces from this article.</p><p>We'll start by adding a function that finds the support point in a given direction. Let's call it FindFurthestPoint. If we have other special types of colliders like spheres, capsules, or planes, we can override this function allowing them to be used with GJK as well.</p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Collider.h</p>
+			<pre class="article-code-text cpp">
 </span><span class="code-r">struct </span><span class="code-t">Collider </span><span class="code-s">{
-	</span><span class="code-r">virtual </span><span class="code-t">vec3 </span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">= </span><span class="code-d">0;
-</span><span class="code-s">};
+	</span><span class="code-r">virtual </span><span class="code-t">vec3 </span><span class="None"></span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">;
+</span><span class="code-s">}</span><span class="code-s">;
 </span></pre>
-			</div>
-		<p>Next, we'll make a MeshCollider with a list of vertices to act as our polygon. FindFurthestPoint needs to loop over each vertex and compare the distance along the direction. We'll keep track of the max vertex & distance to compare. Once we have iterated over all the points, we'll return the max point.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">MeshCollider.h</p>
-				<pre class="article-code-text cpp">
+		</div>
+	<p>Next, we'll make a MeshCollider with a list of vertices to act as our polygon. FindFurthestPoint needs to loop over each vertex and compare the distance along the direction. We'll keep track of the max vertex & distance to compare. Once we have iterated over all the points, we'll return the max point.</p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">MeshCollider.h</p>
+			<pre class="article-code-text cpp">
 </span><span class="code-r">struct </span><span class="code-t">MeshCollider </span><span class="code-s">: </span><span class="code-t">Collider
 </span><span class="code-s">{
 </span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">m_vertices;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">m_vertices</span><span class="code-s">;
  
 </span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-t">vec3 </span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-r">override
+	</span><span class="code-t">vec3 </span><span class="None"></span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-r">override
 	</span><span class="code-s">{
-		</span><span class="code-t">vec3  </span><span class="code-v">maxPoint;
-		</span><span class="code-r">float </span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-p">FLT_MAX;
+		</span><span class="code-t">vec3  </span><span class="code-v">maxPoint</span><span class="code-s">;
+		</span><span class="code-r">float </span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-p">FLT_MAX</span><span class="code-s">;
  
 		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">vertex </span><span class="code-s">: </span><span class="code-w">m_vertices</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-r">float </span><span class="code-v">distance </span><span class="code-s">= </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">vertex</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+			</span><span class="code-r">float </span><span class="code-v">distance </span><span class="code-s">= </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">vertex</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">distance </span><span class="code-s">&gt </span><span class="code-v">maxDistance</span><span class="code-s">) </span><span class="code-s">{
-				</span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-v">distance;
-				</span><span class="code-v">maxPoint </span><span class="code-s">= </span><span class="code-v">vertex;
+				</span><span class="code-v">maxDistance </span><span class="code-s">= </span><span class="code-v">distance</span><span class="code-s">;
+				</span><span class="code-v">maxPoint </span><span class="code-s">= </span><span class="code-v">vertex</span><span class="code-s">;
 			</span><span class="code-s">}
 		</span><span class="code-s">}
  
-		</span><span class="code-j">return </span><span class="code-v">maxPoint;
+		</span><span class="code-j">return </span><span class="code-v">maxPoint</span><span class="code-s">;
 	</span><span class="code-s">}
-</span><span class="code-s">};
+</span><span class="code-s">}</span><span class="code-s">;
 </span></pre>
-			</div>
-		<p>We can roll all of this into a function called Support that will take two colliders and a direction and return the vertex on the Minkowski difference.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">GJK.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-t">vec3 </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">)
+		</div>
+	<p>We can roll all of this into a function called Support that will take two colliders and a direction and return the vertex on the Minkowski difference.</p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">GJK.h</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-t">vec3 </span><span class="None"></span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3 </span><span class="code-a">direction</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-j">return </span><span class="code-a">colliderA</span><span class="code-s">.</span><span class="code-f">FindFurthestPoint</span><span class="code-s">( </span><span class="code-a">direction</span><span class="code-s">)
-	     </span><span class="code-s">- </span><span class="code-a">colliderB</span><span class="code-s">.</span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-j">return </span><span class="code-a">colliderA</span><span class="code-s">.</span><span class="None"></span><span class="code-f">FindFurthestPoint</span><span class="code-s">( </span><span class="code-a">direction</span><span class="code-s">)
+	     </span><span class="code-s">- </span><span class="code-a">colliderB</span><span class="code-s">.</span><span class="None"></span><span class="code-f">FindFurthestPoint</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<p>With these functions, we have abstracted away not only any convex polygon, but any collider type that implements FindFurthestPoint into a single function that we can use in the algorithm.</p>
-			<h2 class="article-subtitle mark-section" id=GJK:>
-				GJK: Surrounding the origin
-				<a class="article-subtitle-id-link" href="#GJK:">#</a>
-			</h2>
-		<p>The goal of the GJK algorithm is to determine if the origin is within the Minkowski difference. This would be easy, but we've thrown out the complete difference for the sake of performance. We only have the Support function that gives us one vertex at a time. We need to iteratively search for and build up what's referred to as a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> around the origin.</p><p>A simplex is defined as a shape that has <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></span> number of vertices with <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math></span> being the number of dimensions. Practically, this represents the simplest shape that can 'select' a region in space. For example, in 2D a triangle is the simplest shape that can select an area containing a specific point. These shapes have simple tests that we can use to determine which vertex, edge, or face is closest to the origin. Depending on which feature is closest, we'll remove, add, or swap points to make the simplex closer to the origin. If we find that the closest feature is already the closest possible, but the origin is not inside, we know there is no collision. Otherwise, if we find the origin inside the simplex we know there has been a collision.</p><p>We get the vertices for the simplex from the Support function, so we need to find the direction to the origin from the closest feature. Searching towards the origin allows the algorithm to converge quickly. Let's look an example. We'll start with an arbitrary vertex then add or remove vertices every iteration until we surround the origin or find it's impossible.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/slide-show.html"></iframe><p>We can see that there are two cases that we need to deal with: a line and triangle. We need one more case in the form of a tetrahedron to select a volume if we want 3D collision detection.</p><div class="article-embed article-embed-no-height-limit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 214.72 64.21">
+		</div>
+	<p>With these functions, we have abstracted away not only any convex polygon, but any collider type that implements FindFurthestPoint into a single function that we can use in the algorithm.</p>
+		<h2 class="article-subtitle mark-section" id=GJK:>
+			GJK: Surrounding the origin
+			<a class="article-subtitle-id-link" href="#GJK:">#</a>
+		</h2>
+	<p>The goal of the GJK algorithm is to determine if the origin is within the Minkowski difference. This would be easy, but we've thrown out the complete difference for the sake of performance. We only have the Support function that gives us one vertex at a time. We need to iteratively search for and build up what's referred to as a <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Simplex">simplex</a> around the origin.</p><p>A simplex is defined as a shape that has <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi><mo>&#x0002B;</mo><mn>1</mn></mrow></math></span> number of vertices with <span class="article-inline-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="inline"><mrow><mi>N</mi></mrow></math></span> being the number of dimensions. Practically, this represents the simplest shape that can 'select' a region in space. For example, in 2D a triangle is the simplest shape that can select an area containing a specific point. These shapes have simple tests that we can use to determine which vertex, edge, or face is closest to the origin. Depending on which feature is closest, we'll remove, add, or swap points to make the simplex closer to the origin. If we find that the closest feature is already the closest possible, but the origin is not inside, we know there is no collision. Otherwise, if we find the origin inside the simplex we know there has been a collision.</p><p>We get the vertices for the simplex from the Support function, so we need to find the direction to the origin from the closest feature. Searching towards the origin allows the algorithm to converge quickly. Let's look an example. We'll start with an arbitrary vertex then add or remove vertices every iteration until we surround the origin or find it's impossible.</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/slide-show.html"></iframe><p>We can see that there are two cases that we need to deal with: a line and triangle. We need one more case in the form of a tetrahedron to select a volume if we want 3D collision detection.</p><div class="article-embed article-embed-no-height-limit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 214.72 64.21">
 	<defs>
 		<style>
 			.cls-1,
@@ -224,233 +224,233 @@
 		</g>
 	</g>
 </svg></div><p>To represent the simplex, let's make a wrapper struct around an std::array. This will allow us to keep track of the number of points, while keeping the memory on the stack for quick access.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">Simplex.h</p>
-				<pre class="article-code-text cpp">
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Simplex.h</p>
+			<pre class="article-code-text cpp">
 </span><span class="code-r">struct </span><span class="code-t">Simplex </span><span class="code-s">{
 </span><span class="code-r">private</span><span class="code-s">:
-	</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">array</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">&gt </span><span class="code-w">m_points;
-	</span><span class="code-r">int </span><span class="code-w">m_size;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">array</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">&gt </span><span class="code-w">m_points</span><span class="code-s">;
+	</span><span class="code-r">int </span><span class="code-w">m_size</span><span class="code-s">;
 
 </span><span class="code-r">public</span><span class="code-s">:
-	</span><span class="code-f">Simplex</span><span class="code-s">(</span><span class="code-s">)
+	</span><span class="None"></span><span class="code-f">Simplex</span><span class="code-s">(</span><span class="code-s">)
 		</span><span class="code-s">: </span><span class="code-w">m_size </span><span class="code-s">(</span><span class="code-d">0</span><span class="code-s">)
 	</span><span class="code-s">{</span><span class="code-s">}
 
-	</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-s">operator=</span><span class="code-s">(</span><span class="code-w">std</span><span class="code-s">::</span><span class="code-t">initializer_list</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-a">list</span><span class="code-s">) 
+	</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-s">operator=</span><span class="code-s">(</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">initializer_list</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-a">list</span><span class="code-s">) 
 	</span><span class="code-s">{
 		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">point </span><span class="code-s">: </span><span class="code-a">list</span><span class="code-s">)
-			</span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-w">m_size</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">point;
+			</span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-w">m_size</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">point</span><span class="code-s">;
 
-		</span><span class="code-j">return </span><span class="code-s">*</span><span class="code-r">this;
+		</span><span class="code-j">return </span><span class="code-s">*</span><span class="code-r">this</span><span class="code-s">;
 	</span><span class="code-s">}
 
-	</span><span class="code-r">void </span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">point</span><span class="code-s">) 
+	</span><span class="code-r">void </span><span class="None"></span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-a">point</span><span class="code-s">) 
 	</span><span class="code-s">{
-		</span><span class="code-w">m_points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-a">point</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">};
-		</span><span class="code-w">m_size </span><span class="code-s">= </span><span class="code-w">std</span><span class="code-s">::</span><span class="code-f">min</span><span class="code-s">(</span><span class="code-w">m_size </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">);
+		</span><span class="code-w">m_points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-a">point</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">, </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">}</span><span class="code-s">;
+		</span><span class="code-w">m_size </span><span class="code-s">= </span><span class="code-n">std</span><span class="code-s">::</span><span class="None"></span><span class="code-f">min</span><span class="code-s">(</span><span class="code-w">m_size </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">4</span><span class="code-s">)</span><span class="code-s">;
 	</span><span class="code-s">}
 
-	</span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-r">operator</span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">i</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-a">i</span><span class="code-s">]; </span><span class="code-s">}
-	</span><span class="code-t">size_t </span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_size; </span><span class="code-s">}
+	</span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-r">operator</span><span class="code-s">[</span><span class="code-s">]</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">i</span><span class="code-s">) </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-a">i</span><span class="code-s">]</span><span class="code-s">; </span><span class="code-s">}
+	</span><span class="code-t">size_t </span><span class="None"></span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_size</span><span class="code-s">; </span><span class="code-s">}
 
-	</span><span class="code-r">auto </span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">); </span><span class="code-s">}
-	</span><span class="code-r">auto </span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">- </span><span class="code-s">(</span><span class="code-d">4 </span><span class="code-s">- </span><span class="code-w">m_size</span><span class="code-s">); </span><span class="code-s">}
-</span><span class="code-s">};
+	</span><span class="code-r">auto </span><span class="None"></span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="None"></span><span class="code-f">begin</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">; </span><span class="code-s">}
+	</span><span class="code-r">auto </span><span class="None"></span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-r">const </span><span class="code-s">{ </span><span class="code-j">return </span><span class="code-w">m_points</span><span class="code-s">.</span><span class="None"></span><span class="code-f">end</span><span class="code-s">(</span><span class="code-s">) </span><span class="code-s">- </span><span class="code-s">(</span><span class="code-d">4 </span><span class="code-s">- </span><span class="code-w">m_size</span><span class="code-s">)</span><span class="code-s">; </span><span class="code-s">}
+</span><span class="code-s">}</span><span class="code-s">;
 </span></pre>
-			</div>
-		<p>We need at least one vertex to start, so we'll manually add it. The search direction for the first vertex doesn't matter, but you may get less iterations with a smarter choice. I'm going to use unit x (1, 0, 0) for no particular reason.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">GJK.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">GJK</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">)
+		</div>
+	<p>We need at least one vertex to start, so we'll manually add it. The search direction for the first vertex doesn't matter, but you may get less iterations with a smarter choice. I'm going to use unit x (1, 0, 0) for no particular reason.</p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">GJK.h</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="None"></span><span class="code-f">GJK</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">Collider</span><span class="code-s">& </span><span class="code-a">colliderB</span><span class="code-s">)
 </span><span class="code-s">{
 	</span><span class="code-c">// Get initial support point in any direction
-	</span><span class="code-t">vec3 </span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">support </span><span class="code-s">= </span><span class="None"></span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">)</span><span class="code-s">;
 </span></pre>
-			</div>
-		<p>Now that we have one point, we can add it to the simplex and set the search direction towards the origin.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
+		</div>
+	<p>Now that we have one point, we can add it to the simplex and set the search direction towards the origin.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
 	</span><span class="code-c">// Simplex is an array of points, max count is 4
-	</span><span class="code-f">Simplex </span><span class="code-v">points;
-	</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+	</span><span class="None"></span><span class="code-f">Simplex </span><span class="code-v">points</span><span class="code-s">;
+	</span><span class="code-v">points</span><span class="code-s">.</span><span class="None"></span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">)</span><span class="code-s">;
 
 	</span><span class="code-c">// New direction is towards the origin
-	</span><span class="code-t">vec3 </span><span class="code-v">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">support;
+	</span><span class="code-t">vec3 </span><span class="code-v">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">support</span><span class="code-s">;
 </span></pre>
-			</div>
-		<p>In a loop, we'll add another point. The exit condition is that this new point is not in front of the search direction. This would exit if the direction finds a vertex that was already the furthest one along it.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
+		</div>
+	<p>In a loop, we'll add another point. The exit condition is that this new point is not in front of the search direction. This would exit if the direction finds a vertex that was already the furthest one along it.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
 	</span><span class="code-j">while </span><span class="code-s">(</span><span class="code-r">true</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-v">support </span><span class="code-s">= </span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">);
+		</span><span class="code-v">support </span><span class="code-s">= </span><span class="None"></span><span class="code-f">Support</span><span class="code-s">(</span><span class="code-a">colliderA</span><span class="code-s">, </span><span class="code-a">colliderB</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">)</span><span class="code-s">;
  
 		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">) </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">return </span><span class="code-r">false; </span><span class="code-c">// no collision
+			</span><span class="code-j">return </span><span class="code-r">false</span><span class="code-s">; </span><span class="code-c">// no collision
 		</span><span class="code-s">}
 
-		</span><span class="code-v">points</span><span class="code-s">.</span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">);
+		</span><span class="code-v">points</span><span class="code-s">.</span><span class="None"></span><span class="code-f">push_front</span><span class="code-s">(</span><span class="code-v">support</span><span class="code-s">)</span><span class="code-s">;
 </span></pre>
-			</div>
-		<p>Now that we have a line, we'll feed it into a function that updates the simplex and search direction. It'll return true or false to signify a collision.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">return </span><span class="code-r">true;
+		</div>
+	<p>Now that we have a line, we'll feed it into a function that updates the simplex and search direction. It'll return true or false to signify a collision.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-v">points</span><span class="code-s">, </span><span class="code-v">direction</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="code-r">true</span><span class="code-s">;
 		</span><span class="code-s">}
 	</span><span class="code-s">}
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<p>That's all for the main loop. It's dead simple in the world of algorithms, but the real work is in the NextSimplex function. We need a series of different checks for each shape of simplex to see what the new simplex should be and what direction we'll search in next.</p><p>The NextSimplex function will act as a dispatcher to three other functions, one for each shape.</p>
-			<div class="article-code draw-left-line">
-				<p class="article-code-file mark-section">GJK.h</p>
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+		</div>
+	<p>That's all for the main loop. It's dead simple in the world of algorithms, but the real work is in the NextSimplex function. We need a series of different checks for each shape of simplex to see what the new simplex should be and what direction we'll search in next.</p><p>The NextSimplex function will act as a dispatcher to three other functions, one for each shape.</p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">GJK.h</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="None"></span><span class="code-f">NextSimplex</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-j">switch </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">.</span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">case </span><span class="code-d">2</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Line       </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
-		</span><span class="code-j">case </span><span class="code-d">3</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Triangle   </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
-		</span><span class="code-j">case </span><span class="code-d">4</span><span class="code-s">: </span><span class="code-j">return </span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-j">switch </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">.</span><span class="None"></span><span class="code-f">size</span><span class="code-s">(</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">case </span><span class="code-d">2</span><span class="code-s">: </span><span class="code-j">return </span><span class="None"></span><span class="code-f">Line       </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
+		</span><span class="code-j">case </span><span class="code-d">3</span><span class="code-s">: </span><span class="code-j">return </span><span class="None"></span><span class="code-f">Triangle   </span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
+		</span><span class="code-j">case </span><span class="code-d">4</span><span class="code-s">: </span><span class="code-j">return </span><span class="None"></span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-a">points</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 	</span><span class="code-s">}
  
 	</span><span class="code-c">// never should be here
-	</span><span class="code-j">return </span><span class="code-r">false;
+	</span><span class="code-j">return </span><span class="code-r">false</span><span class="code-s">;
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<p>We can add one more helper function to help lessen the headache from these next functions.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">ao</span><span class="code-s">)
+		</div>
+	<p>We can add one more helper function to help lessen the headache from these next functions.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-r">const </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">ao</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-j">return </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-a">ao</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0;
+	</span><span class="code-j">return </span><span class="code-f">dot</span><span class="code-s">(</span><span class="code-a">direction</span><span class="code-s">, </span><span class="code-a">ao</span><span class="code-s">) </span><span class="code-s">&gt </span><span class="code-d">0</span><span class="code-s">;
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<p>We'll start with the line case. There are three possible regions that the origin could be in, but realistically only two. We started with point B, and searched in the direction of A, which means that the origin cannot be in the red region. This leaves us with one check between the vector AB and AO. If AO is inside the green region, we move on. If AO is in the blue region, we'll come back to the line case, but B will be replaced.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+		</div>
+	<p>We'll start with the line case. There are three possible regions that the origin could be in, but realistically only two. We started with point B, and searched in the direction of A, which means that the origin cannot be in the red region. This leaves us with one check between the vector AB and AO. If AO is inside the green region, we move on. If AO is in the blue region, we'll come back to the line case, but B will be replaced.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="None"></span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
-	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">;
 
-	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
-	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
  
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">);
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">)</span><span class="code-s">;
 	</span><span class="code-s">}
 
 	</span><span class="code-j">else </span><span class="code-s">{
-		</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a </span><span class="code-s">};
-		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">ao;
+		</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a </span><span class="code-s">}</span><span class="code-s">;
+		</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">ao</span><span class="code-s">;
 	</span><span class="code-s">}
 
-	</span><span class="code-j">return </span><span class="code-r">false;
+	</span><span class="code-j">return </span><span class="code-r">false</span><span class="code-s">;
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<img class="article-embed" src="../articles/gjk-algorithm/line.jpg"></img><p>In this case, AO is in the same direction as AB, so we know it's in the green region. We'll set the search direction pointing towards the origin and move on. In 2D, you would not need to use cross products, but in 3D the origin could be anywhere in a cylinder around the line, so we need them to get the correct direction.</p><p>The triangle case has seven regions, but again we can cull out some impossibilities. Yellow, red, and purple cannot have the origin because the new point we added was A, meaning that the origin cannot be in the direction of the BC face. That leaves us with four regions we need to check.</p><p>If the origin is outside the triangle on the AC face, we'll check if it's also in the direction of AC. If it is, then we'll remove B from the simplex and move on, if not, we'll do a line case between AB. If the origin was not in the direction of the AC face, we'll check the AB face. If it's there, we'll do the same line case between AB. Finally, if both checks fail, we know it must be inside the triangle. In 2D we would be done and could return true, but in 3D we need to check if the origin is above or below the triangle and move on.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+		</div>
+	<img class="article-embed" src="../articles/gjk-algorithm/line.jpg"></img><p>In this case, AO is in the same direction as AB, so we know it's in the green region. We'll set the search direction pointing towards the origin and move on. In 2D, you would not need to use cross products, but in 3D the origin could be anywhere in a cylinder around the line, so we need them to get the correct direction.</p><p>The triangle case has seven regions, but again we can cull out some impossibilities. Yellow, red, and purple cannot have the origin because the new point we added was A, meaning that the origin cannot be in the direction of the BC face. That leaves us with four regions we need to check.</p><p>If the origin is outside the triangle on the AC face, we'll check if it's also in the direction of AC. If it is, then we'll remove B from the simplex and move on, if not, we'll do a line case between AB. If the origin was not in the direction of the AC face, we'll check the AB face. If it's there, we'll do the same line case between AB. Finally, if both checks fail, we know it must be inside the triangle. In 2D we would be done and could return true, but in 3D we need to check if the origin is above or below the triangle and move on.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="None"></span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
-	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
-	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">]</span><span class="code-s">;
 
-	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
-	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a;
-	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
  
-	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">;
  
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">};
-			</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">}</span><span class="code-s">;
+			</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">;
 		</span><span class="code-s">}
 
 		</span><span class="code-j">else </span><span class="code-s">{
-			</span><span class="code-j">return </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+			</span><span class="code-j">return </span><span class="None"></span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 		</span><span class="code-s">}
 	</span><span class="code-s">}
  
 	</span><span class="code-j">else </span><span class="code-s">{
-		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">abc</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-			</span><span class="code-j">return </span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">abc</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-j">return </span><span class="None"></span><span class="code-f">Line</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 		</span><span class="code-s">}
 
 		</span><span class="code-j">else </span><span class="code-s">{
-			</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">abc;
+			</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-v">abc</span><span class="code-s">;
 			</span><span class="code-s">}
 
 			</span><span class="code-j">else </span><span class="code-s">{
-				</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">};
-				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">abc;
+				</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">;
+				</span><span class="code-a">direction </span><span class="code-s">= </span><span class="code-s">-</span><span class="code-v">abc</span><span class="code-s">;
 			</span><span class="code-s">}
 		</span><span class="code-s">}
 	</span><span class="code-s">}
 
-	</span><span class="code-j">return </span><span class="code-r">false;
+	</span><span class="code-j">return </span><span class="code-r">false</span><span class="code-s">;
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<img class="article-embed" src="../articles/gjk-algorithm/triangle.jpg"></img><p>The tetrahedron case is the most complex, but almost entirely made up of triangle cases. We don't need to test for the origin below the tetrahedron for the same reason as before. We only need to determine which face, if any, the origin is in the direction of. If there is one, we'll go back to the triangle case with that face as the simplex, but if not, we know it must be inside the tetrahedron and we'll return true.</p>
-			<div class="article-code draw-left-line">
-				
-				<pre class="article-code-text cpp">
-</span><span class="code-r">bool </span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
+		</div>
+	<img class="article-embed" src="../articles/gjk-algorithm/triangle.jpg"></img><p>The tetrahedron case is the most complex, but almost entirely made up of triangle cases. We don't need to test for the origin below the tetrahedron for the same reason as before. We only need to determine which face, if any, the origin is in the direction of. If there is one, we'll go back to the triangle case with that face as the simplex, but if not, we know it must be inside the tetrahedron and we'll return true.</p>
+		<div class="article-code draw-left-line">
+			
+			<pre class="article-code-text cpp">
+</span><span class="code-r">bool </span><span class="None"></span><span class="code-f">Tetrahedron</span><span class="code-s">(</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-a">points</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-a">direction</span><span class="code-s">)
 </span><span class="code-s">{
-	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">];
-	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">];
-	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">];
-	</span><span class="code-t">vec3 </span><span class="code-v">d </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">3</span><span class="code-s">];
+	</span><span class="code-t">vec3 </span><span class="code-v">a </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">b </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">c </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v"></span><span class="code-d">d </span><span class="code-s">= </span><span class="code-a">points</span><span class="code-s">[</span><span class="code-d">3</span><span class="code-s">]</span><span class="code-s">;
 
-	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a;
-	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a;
-	</span><span class="code-t">vec3 </span><span class="code-v">ad </span><span class="code-s">= </span><span class="code-v">d </span><span class="code-s">- </span><span class="code-v">a;
-	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a;
+	</span><span class="code-t">vec3 </span><span class="code-v">ab </span><span class="code-s">= </span><span class="code-v">b </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">ac </span><span class="code-s">= </span><span class="code-v">c </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">ad </span><span class="code-s">= </span><span class="code-v"></span><span class="code-d">d </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">ao </span><span class="code-s">=   </span><span class="code-s">- </span><span class="code-v">a</span><span class="code-s">;
  
-	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">);
-	</span><span class="code-t">vec3 </span><span class="code-v">acd </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ad</span><span class="code-s">);
-	</span><span class="code-t">vec3 </span><span class="code-v">adb </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ad</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">);
+	</span><span class="code-t">vec3 </span><span class="code-v">abc </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ab</span><span class="code-s">, </span><span class="code-v">ac</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">acd </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ac</span><span class="code-s">, </span><span class="code-v">ad</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-t">vec3 </span><span class="code-v">adb </span><span class="code-s">= </span><span class="code-f">cross</span><span class="code-s">(</span><span class="code-v">ad</span><span class="code-s">, </span><span class="code-v">ab</span><span class="code-s">)</span><span class="code-s">;
  
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">abc</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="None"></span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">b</span><span class="code-s">, </span><span class="code-v">c </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 	</span><span class="code-s">}
 		
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">acd</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v">d </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">acd</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="None"></span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">c</span><span class="code-s">, </span><span class="code-v"></span><span class="code-d">d </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 	</span><span class="code-s">}
  
-	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">adb</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
-		</span><span class="code-j">return </span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v">d</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">);
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="None"></span><span class="code-f">SameDirection</span><span class="code-s">(</span><span class="code-v">adb</span><span class="code-s">, </span><span class="code-v">ao</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="None"></span><span class="code-f">Triangle</span><span class="code-s">(</span><span class="code-a">points </span><span class="code-s">= </span><span class="code-s">{ </span><span class="code-v">a</span><span class="code-s">, </span><span class="code-v"></span><span class="code-d">d</span><span class="code-s">, </span><span class="code-v">b </span><span class="code-s">}</span><span class="code-s">, </span><span class="code-a">direction</span><span class="code-s">)</span><span class="code-s">;
 	</span><span class="code-s">}
  
-	</span><span class="code-j">return </span><span class="code-r">true;
+	</span><span class="code-j">return </span><span class="code-r">true</span><span class="code-s">;
 </span><span class="code-s">}
 </span></pre>
-			</div>
-		<img class="article-embed" src="../articles/gjk-algorithm/tetrahedron.jpg"></img><p>With that final case, we have completed the GJK algorithm. As you can see it is not that complex looking at it from a geometric point of view. This algorithm only gives you a yes/no answer about a collision, so you cannot respond to it. In the next article I will cover an algorithm that uses the simplex and similar principles to find the collision normal then maybe get into rotational physics. Thanks for reading!</p><p>Here is a demo that will let you play around with the algorithm and let you inspect each iteration, here's the <a class="underline" target="_blank" href="../articles/gjk-algorithm/app/demo.html">full version</a> if you want a better look...</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/demo.html"></iframe>
+		</div>
+	<img class="article-embed" src="../articles/gjk-algorithm/tetrahedron.jpg"></img><p>With that final case, we have completed the GJK algorithm. As you can see it is not that complex looking at it from a geometric point of view. This algorithm only gives you a yes/no answer about a collision, so you cannot respond to it. In the next article I will cover an algorithm that uses the simplex and similar principles to find the collision normal then maybe get into rotational physics. Thanks for reading!</p><p>Here is a demo that will let you play around with the algorithm and let you inspect each iteration, here's the <a class="underline" target="_blank" href="../articles/gjk-algorithm/app/demo.html">full version</a> if you want a better look...</p><iframe class="article-embed" src="../articles/gjk-algorithm/app/demo.html"></iframe>
 			
-			<div class="article-comment-section">
-				<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
-				<br />
-				<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://api.winter.dev/comments&subject=gjk-algorithm"></iframe>
-				<script src="../scripts/resize_comment_section.js"></script>
-			</div>
-	   
+		<div class="article-comment-section">
+			<h2 class="article-subtitle mark-section" id="comments">Comments<a class="article-subtitle-id-link" href="#comments">#</a></h2>
+			<br />
+			<iframe id="comment-section-frame" class="comment-frame" scrolling="no" src="../external/comments.html?host=https://api.winter.dev/comments&subject=gjk-algorithm"></iframe>
+			<script src="../scripts/resize_comment_section.js"></script>
+		</div>
+	
 		</div>
 	</div>
 

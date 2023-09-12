@@ -7,9 +7,9 @@ function initCapsule(sketch) {
 	slider_height  = sketch.createSlider(1, 2, 2, .1);
 	slider_radius  = sketch.createSlider(.1, 1, .5, .1);
 
-	slider_res_cap.parent('capsule-tools-res');
-	slider_height .parent('capsule-tools-height');
-	slider_radius .parent('capsule-tools-radius');
+	addTool('capsule', 'Resolution', slider_res_cap);
+	addTool('capsule', 'Height', slider_height);
+	addTool('capsule', 'Radius', slider_radius);
 
 	return [slider_res_cap, slider_height, slider_radius];
 }
@@ -114,4 +114,4 @@ function getCapsuleTable() {
 	return table;
 }
 
-startSketch(initCapsule, makeCapsule, 'capsule');
+startSketch(initCapsule, makeCapsule, getCapsuleTable, 'capsule');

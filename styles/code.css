@@ -3,6 +3,7 @@
 .cpp .code-w { color: #dadada; }
 .cpp .code-s { color: #b4b4b4; }
 .cpp .code-a { color: #9a9a9a; }
+.cpp .code-n { color: #c8c8c8; }
 .cpp .code-v { color: #9cdcfe; }
 .cpp .code-c { color: #57a64a; }
 .cpp .code-r { color: #569cd6; }
@@ -17,6 +18,7 @@
 [color-theme="light"] .cpp .code-w { color: black; }
 [color-theme="light"] .cpp .code-s { color: black; }
 [color-theme="light"] .cpp .code-a { color: gray; }
+[color-theme="light"] .cpp .code-n { color: black; }
 [color-theme="light"] .cpp .code-v { color: #1f377f;  }
 [color-theme="light"] .cpp .code-c { color: green; }
 [color-theme="light"] .cpp .code-r { color: blue; }

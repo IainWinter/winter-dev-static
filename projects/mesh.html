@@ -23,9 +23,9 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="../articles.html">Articles</a>
-					<a class="nav-link" href="../projects.html">Projects</a>
-					<a class="nav-link" href="../support.html">Support</a>
+					<a class="nav-link" href="../articles">Articles</a>
+					<a class="nav-link" href="../projects">Projects</a>
+					<a class="nav-link" href="../support">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
@@ -39,72 +39,38 @@
 	
 		<div class="page full-page">
 			<h1 class="page-title">Mesh Generation Algorithms</h1>
-			
-
-<div class="shapes">
+			<div class="shapes">
 	
-			<div class="shape">
-				<div id="capsule"></div>
-				<a class="shape-title" href="../projects/mesh/capsule.html">Capsule</a>
-		
-				<div class="shape-tool" id="capsule-tools-res">
-					<p>Resolution</p>
-				</div>
-			
-				<div class="shape-tool" id="capsule-tools-height">
-					<p>Height</p>
-				</div>
-			
-				<div class="shape-tool" id="capsule-tools-radius">
-					<p>Radius</p>
-				</div>
-			
-			</div>
-		
-			<div class="shape">
-				<div id="icosphere"></div>
-				<a class="shape-title" href="../projects/mesh/icosphere.html">Icosphere</a>
-		
-				<div class="shape-tool" id="icosphere-tools-res">
-					<p>Resolution</p>
-				</div>
-			
-			</div>
-		
-			<div class="shape">
-				<div id="plane"></div>
-				<a class="shape-title" href="../projects/mesh/plane.html">Plane</a>
-		
-				<div class="shape-tool" id="plane-tools-resX">
-					<p>Resolution X</p>
-				</div>
-			
-				<div class="shape-tool" id="plane-tools-resZ">
-					<p>Resolution Z</p>
-				</div>
-			
-			</div>
-		
-			<div class="shape">
-				<div id="uvsphere"></div>
-				<a class="shape-title" href="../projects/mesh/uvsphere.html">UV Sphere</a>
-		
-				<div class="shape-tool" id="uvsphere-tools-resLon">
-					<p>Resolution Longitude</p>
-				</div>
-			
-				<div class="shape-tool" id="uvsphere-tools-resLat">
-					<p>Resolution Latitude</p>
-				</div>
-			
-			</div>
-		
+		<div class="shape">
+			<div id="plane"></div>
+			<a class="shape-title" href="../projects/mesh/plane">Plane</a>
+			<div id="plane-tools"></div>
+		</div>
+	
+		<div class="shape">
+			<div id="capsule"></div>
+			<a class="shape-title" href="../projects/mesh/capsule">Capsule</a>
+			<div id="capsule-tools"></div>
+		</div>
+	
+		<div class="shape">
+			<div id="uvsphere"></div>
+			<a class="shape-title" href="../projects/mesh/uvsphere">UV Sphere</a>
+			<div id="uvsphere-tools"></div>
+		</div>
+	
+		<div class="shape">
+			<div id="icosphere"></div>
+			<a class="shape-title" href="../projects/mesh/icosphere">Icosphere</a>
+			<div id="icosphere-tools"></div>
+		</div>
+	
 </div>
 
 <link rel="stylesheet" href="../projects/mesh/style.css">
 
 <script src="../projects/mesh/p5.min.js"></script>
-<script src="../projects/mesh/script.js"></script>
+<script src="../projects/mesh/draw_shape.js"></script>
 
 <script src="../projects/mesh/plane.js"></script>
 <script src="../projects/mesh/capsule.js"></script>

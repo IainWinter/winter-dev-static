@@ -1,5 +1,5 @@
 <html lang="en">
-
+ 
 <head>
 	<title>Icosphere</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,6 +7,8 @@
 	<link rel="stylesheet" href="../../styles/global.css" />
 	<link rel="stylesheet" href="../../styles/top.css" />
 	<link rel="stylesheet" href="../../styles/card.css" />
+	<link rel="stylesheet" href="../../styles/code.css" />
+	<link rel="stylesheet" href="../../styles/article.css" />
 	<link rel="stylesheet" href="../../projects/mesh/style.css">
 </head>
 
@@ -25,9 +27,9 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="../../articles.html">Articles</a>
-					<a class="nav-link" href="../../projects.html">Projects</a>
-					<a class="nav-link" href="../../support.html">Support</a>
+					<a class="nav-link" href="../../articles">Articles</a>
+					<a class="nav-link" href="../../projects">Projects</a>
+					<a class="nav-link" href="../../support">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
@@ -40,32 +42,224 @@
 		<script src="../../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
-			<h1 class="page-title">Mesh / Icosphere</h1>
-			<div class="shape-article">
-				<div class="shape-article-text">
-					<p>This is a tes</p>
-				</div>
-			
+			<h1 class="page-title"><a href="../..//projects/mesh">Mesh</a> / Icosphere</h1>
+			<div class="draw-left-line">
+				<p class="article-code-file mark-section">Shape</p>
 				<div class="shape-side-panel">
 					
-			<div class="shape-side-panel-top">
-				<div id="icosphere"></div>
-				<h3 class="shape-side-panel-name">Icosphere</h3>
-		
-				<div class="shape-tool" id="icosphere-tools-res">
-					<p>Resolution</p>
+		<div id="icosphere"></div>
+		<div id="icosphere-tools"></div>
+	
 				</div>
-			
 			</div>
-			<table id="shape-table" class="shape-side-panel-table"></table>
-		
-				</div>
+
+			<div class="shape-article-text">
+				<p>An Icosphere is created by iterativly splitting the faces of an <a class="underline" target="_blank" href="https://en.wikipedia.org/wiki/Icosahedron">Icosahedron</a>. The main selling point of icospheres is that their distributions of points are more uniform than a UV sphere. </p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Ico`v`sphere.h</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-a">#pragma once
+
+</span><span class="code-a">#include </span><span class="code-l">"glm/vec2.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="code-l">"glm/vec3.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="code-l">"glm/geometric.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="None"></span><span class="code-l">&lt</span><span class="None"></span><span class="code-l">vector</span><span class="None"></span><span class="code-l">&gt
+
+</span><span class="code-r">using namespace </span><span class="code-w">glm</span><span class="code-s">;
+
+</span><span class="code-r">struct </span><span class="code-t">Ico</span><span class="code-v">sphere </span><span class="code-s">{
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-w">index</span><span class="code-s">;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">pos</span><span class="code-s">;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec2</span><span class="code-s">&gt </span><span class="code-w">uvs</span><span class="code-s">;
+</span><span class="code-s">}</span><span class="code-s">;
+
+</span><span class="code-t">Ico</span><span class="code-v">sphere </span><span class="None"></span><span class="code-f">MakeIco</span><span class="code-v">sphere</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">resolution</span><span class="code-s">)</span><span class="code-s">;
+</span></pre>
+		</div>
+	
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Ico`v`sphere.cpp</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-a">#include </span><span class="code-l">"icosphere.h</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="None"></span><span class="code-l">&lt</span><span class="None"></span><span class="code-l">unordered_map</span><span class="None"></span><span class="code-l">&gt
+
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-r">float </span><span class="code-n"></span><span class="code-n">Z </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-d">1.0f </span><span class="code-s">+ </span><span class="None"></span><span class="code-f">sqrt</span><span class="code-s">(</span><span class="code-d">5.0f</span><span class="code-s">)</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-d">2.0f</span><span class="code-s">; </span><span class="code-c">// Golden ratio
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-t">vec2 </span><span class="code-n">UV </span><span class="code-s">= </span><span class="code-t">vec2</span><span class="code-s">(</span><span class="code-d">1 </span><span class="code-s">/ </span><span class="code-d">11.0f</span><span class="code-s">, </span><span class="code-d">1 </span><span class="code-s">/ </span><span class="code-d">3.0f</span><span class="code-s">)</span><span class="code-s">; </span><span class="code-c">// The UV coordinates are laid out in a 11x3 grid
+
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-r">int </span><span class="code-n">IcoVertexCount </span><span class="code-s">= </span><span class="code-d">22</span><span class="code-s">;
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-r">int </span><span class="code-n"></span><span class="code-n">IcoIndexCount </span><span class="code-s">= </span><span class="code-d">60</span><span class="code-s">;
+ 
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-t">vec3 </span><span class="code-n">IcoVerts</span><span class="code-s">[</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-s">{
+	</span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">,
+	</span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">,  </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">)</span><span class="code-s">,
+	</span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">0</span><span class="code-s">,  </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">,  </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">,
+	</span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">,
+	</span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">0</span><span class="code-s">,  </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-n">Z</span><span class="code-s">)</span><span class="code-s">, 
+	</span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-t">vec3</span><span class="code-s">( </span><span class="code-n">Z</span><span class="code-s">,  </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">) 
+</span><span class="code-s">}</span><span class="code-s">;
+
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-t">vec2 </span><span class="code-n">IcoUvs</span><span class="code-s">[</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-s">{
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">0</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  0
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  1
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  2  //
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  3  // Vertices & UVs are ordered by U then V coordinates,
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  4  //
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">3</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  5  //        4     8    12    16    20
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">3</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  6  //      /  \  /  \  /  \  /  \  /  \ 
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">4</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  7  //     2---- 6----10----14----18----21
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">4</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  8  //   /  \  /  \  /  \  /  \  /  \  /
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">5</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">//  9  //  0---- 3---- 7----11----15----19
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">5</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 10  //   \  /  \  /  \  /  \  /  \  /
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">6</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 11  //     1     5     9    13    17
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">6</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 12  //
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">7</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 13  // [4, 8, 12, 16, 20] have the same position
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">7</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 14  // [1, 5, 9, 13, 17]  have the same position
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">8</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 15  // [0, 19]            have the same position
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">8</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 16  // [2, 21]            have the same position
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">9</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 17  // 
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">( </span><span class="code-d">9</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 18
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">(</span><span class="code-d">10</span><span class="code-s">, </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 19
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">(</span><span class="code-d">10</span><span class="code-s">, </span><span class="code-d">3</span><span class="code-s">)</span><span class="code-s">, </span><span class="code-c">// 20
+	</span><span class="code-n">UV </span><span class="code-s">* </span><span class="code-t">vec2</span><span class="code-s">(</span><span class="code-d">11</span><span class="code-s">, </span><span class="code-d">2</span><span class="code-s">)  </span><span class="code-c">// 21
+</span><span class="code-s">}</span><span class="code-s">;
+ 
+</span><span class="code-r">static </span><span class="code-r">const </span><span class="code-r">int </span><span class="code-n">IcoIndex</span><span class="code-s">[</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-s">{
+	 </span><span class="code-d">2</span><span class="code-s">,  </span><span class="code-d">6</span><span class="code-s">,  </span><span class="code-d">4</span><span class="code-s">, </span><span class="code-c">// Top
+	 </span><span class="code-d">6</span><span class="code-s">, </span><span class="code-d">10</span><span class="code-s">,  </span><span class="code-d">8</span><span class="code-s">,
+	</span><span class="code-d">10</span><span class="code-s">, </span><span class="code-d">14</span><span class="code-s">, </span><span class="code-d">12</span><span class="code-s">,
+	</span><span class="code-d">14</span><span class="code-s">, </span><span class="code-d">18</span><span class="code-s">, </span><span class="code-d">16</span><span class="code-s">,
+	</span><span class="code-d">18</span><span class="code-s">, </span><span class="code-d">21</span><span class="code-s">, </span><span class="code-d">20</span><span class="code-s">,
+
+	 </span><span class="code-d">0</span><span class="code-s">,  </span><span class="code-d">3</span><span class="code-s">,  </span><span class="code-d">2</span><span class="code-s">, </span><span class="code-c">// Middle
+	 </span><span class="code-d">2</span><span class="code-s">,  </span><span class="code-d">3</span><span class="code-s">,  </span><span class="code-d">6</span><span class="code-s">,
+	 </span><span class="code-d">3</span><span class="code-s">,  </span><span class="code-d">7</span><span class="code-s">,  </span><span class="code-d">6</span><span class="code-s">,
+	 </span><span class="code-d">6</span><span class="code-s">,  </span><span class="code-d">7</span><span class="code-s">, </span><span class="code-d">10</span><span class="code-s">,
+	 </span><span class="code-d">7</span><span class="code-s">, </span><span class="code-d">11</span><span class="code-s">, </span><span class="code-d">10</span><span class="code-s">,
+	</span><span class="code-d">10</span><span class="code-s">, </span><span class="code-d">11</span><span class="code-s">, </span><span class="code-d">14</span><span class="code-s">,
+	</span><span class="code-d">11</span><span class="code-s">, </span><span class="code-d">15</span><span class="code-s">, </span><span class="code-d">14</span><span class="code-s">,
+	</span><span class="code-d">14</span><span class="code-s">, </span><span class="code-d">15</span><span class="code-s">, </span><span class="code-d">18</span><span class="code-s">,
+	</span><span class="code-d">15</span><span class="code-s">, </span><span class="code-d">19</span><span class="code-s">, </span><span class="code-d">18</span><span class="code-s">,
+	</span><span class="code-d">18</span><span class="code-s">, </span><span class="code-d">19</span><span class="code-s">, </span><span class="code-d">21</span><span class="code-s">,
+
+	 </span><span class="code-d">0</span><span class="code-s">,  </span><span class="code-d">1</span><span class="code-s">,  </span><span class="code-d">3</span><span class="code-s">, </span><span class="code-c">// Bottom
+	 </span><span class="code-d">3</span><span class="code-s">,  </span><span class="code-d">5</span><span class="code-s">,  </span><span class="code-d">7</span><span class="code-s">,
+	 </span><span class="code-d">7</span><span class="code-s">,  </span><span class="code-d">9</span><span class="code-s">, </span><span class="code-d">11</span><span class="code-s">,
+	</span><span class="code-d">11</span><span class="code-s">, </span><span class="code-d">13</span><span class="code-s">, </span><span class="code-d">15</span><span class="code-s">,
+	</span><span class="code-d">15</span><span class="code-s">, </span><span class="code-d">17</span><span class="code-s">, </span><span class="code-d">19
+</span><span class="code-s">}</span><span class="code-s">;
+
+</span><span class="code-t">Icosphere MakeIcosphere</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">resolution</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-c">// For each resolution, every triangle is subdivided and replaced with 4 new triangles.
+	</span><span class="code-c">// Most of the vertices are shared between triangles, so an index is also generated.
+	</span><span class="code-c">// The number of vertices and indices for a given resolution can be calculated by using a geometric series.
+	</span><span class="code-c">//
+	</span><span class="code-c">// Example:
+	</span><span class="code-c">// 
+	</span><span class="code-c">//     *-------*               *---*---*
+	</span><span class="code-c">//    / \     /               / \ / \ /
+	</span><span class="code-c">//   /   \   /    -------&gt   *---*---*
+	</span><span class="code-c">//  /     \ /               / \ / \ /
+	</span><span class="code-c">// *-------*               *---*---*
+ 
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">rn </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-r">int</span><span class="code-s">)pow</span><span class="code-s">(</span><span class="code-d">4</span><span class="code-s">, </span><span class="code-a">resolution</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">totalIndexCount </span><span class="code-s">= </span><span class="code-n">IcoIndexCount </span><span class="code-s">* rn</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">totalVertexCount </span><span class="code-s">= </span><span class="code-n">IcoVertexCount </span><span class="code-s">+ </span><span class="code-n">IcoIndexCount </span><span class="code-s">* </span><span class="code-s">(</span><span class="code-d">1 </span><span class="code-s">- </span><span class="code-v">rn</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-s">(</span><span class="code-d">1 </span><span class="code-s">- </span><span class="code-d">4</span><span class="code-s">)</span><span class="code-s">;
+
+	</span><span class="code-t">Icosphere </span><span class="code-v">sphere</span><span class="code-s">;
+
+	</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalIndexCount</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalVertexCount</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalVertexCount</span><span class="code-s">)</span><span class="code-s">;
+	
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int i </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; i </span><span class="code-s">&lt </span><span class="code-n">IcoVertexCount</span><span class="code-s">; i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{  </span><span class="code-c">// Copy in initial mesh
+		</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-n">IcoVerts</span><span class="code-s">[i</span><span class="code-s">]</span><span class="code-s">;
+		</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">[i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-n">IcoUvs</span><span class="code-s">[i</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">i </span><span class="code-s">&lt </span><span class="code-n">IcoIndexCount</span><span class="code-s">; </span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-n">IcoIndex</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">]</span><span class="code-s">;
+	</span><span class="code-s">}
+ 
+	</span><span class="code-r">int </span><span class="code-v">currentIndexCount </span><span class="code-s">= </span><span class="code-n">IcoIndexCount</span><span class="code-s">;
+	</span><span class="code-r">int </span><span class="code-v">currentVertCount </span><span class="code-s">= </span><span class="code-n">IcoVertexCount</span><span class="code-s">;
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">r </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">r </span><span class="code-s">&lt </span><span class="code-a">resolution</span><span class="code-s">; </span><span class="code-v">r</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-c">// Now split the triangles.
+		</span><span class="code-c">// This can be done in place, but needs to keep track of the unique triangles
+		</span><span class="code-c">// 
+		</span><span class="code-c">//     i+2                 i+2
+		</span><span class="code-c">//    /   \               /  \
+		</span><span class="code-c">//   /     \    ----&gt   m2----m1
+		</span><span class="code-c">//  /       \          /  \  /  \
+		</span><span class="code-c">// i---------i+1      i----m0----i+1
+ 
+		</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">unordered_map</span><span class="code-s">&lt</span><span class="code-t">uint64_t</span><span class="code-s">, </span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-v">triangleFromEdge</span><span class="code-s">;
+		</span><span class="code-r">int </span><span class="code-v">indexCount </span><span class="code-s">= </span><span class="code-v">currentIndexCount</span><span class="code-s">;
+
+		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">t </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">t </span><span class="code-s">&lt </span><span class="code-v">indexCount</span><span class="code-s">; </span><span class="code-v">t </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">3</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-r">int </span><span class="code-v">midpoints</span><span class="code-s">[</span><span class="code-d">3</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-s">{</span><span class="code-s">}</span><span class="code-s">;
+
+			</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">e </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">e </span><span class="code-s">&lt </span><span class="code-d">3</span><span class="code-s">; </span><span class="code-v">e</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+				</span><span class="code-r">int </span><span class="code-v">first </span><span class="code-s">= </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-v">e</span><span class="code-s">]</span><span class="code-s">;
+				</span><span class="code-r">int </span><span class="code-v">second </span><span class="code-s">= </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-s">(</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-v">e </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">% </span><span class="code-d">3</span><span class="code-s">]</span><span class="code-s">;
+
+				</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">first </span><span class="code-s">&gt </span><span class="code-v">second</span><span class="code-s">) </span><span class="code-s">{
+					</span><span class="code-n">std</span><span class="code-s">::</span><span class="None"></span><span class="code-f">swap</span><span class="code-s">(</span><span class="code-v">first</span><span class="code-s">, </span><span class="code-v">second</span><span class="code-s">)</span><span class="code-s">;
+				</span><span class="code-s">}
+
+				</span><span class="code-t">uint64_t </span><span class="code-v">hash </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-t">uint64_t</span><span class="code-s">)</span><span class="code-v">first </span><span class="code-s">| </span><span class="code-s">(</span><span class="code-t">uint64_t</span><span class="code-s">)</span><span class="code-v">second </span><span class="code-s">&lt</span><span class="code-s">&lt </span><span class="code-s">(</span><span class="code-r">sizeof</span><span class="code-s">(</span><span class="code-t">uint32_t</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-d">8</span><span class="code-s">)</span><span class="code-s">;
+
+				</span><span class="code-r">auto </span><span class="code-s">[</span><span class="code-v">triangle</span><span class="code-s">, </span><span class="code-v">wasNewEdge</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">triangleFromEdge</span><span class="code-s">.</span><span class="None"></span><span class="code-f">insert</span><span class="code-s">(</span><span class="code-s">{ </span><span class="code-v">hash</span><span class="code-s">, </span><span class="code-v">currentVertCount </span><span class="code-s">}</span><span class="code-s">)</span><span class="code-s">;
+
+				</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-v">wasNewEdge</span><span class="code-s">) </span><span class="code-s">{
+					</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[</span><span class="code-v">currentVertCount</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[</span><span class="code-v">first</span><span class="code-s">] </span><span class="code-s">+ </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[</span><span class="code-v">second</span><span class="code-s">]</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-d">2.0f</span><span class="code-s">;
+					</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">[</span><span class="code-v">currentVertCount</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">[</span><span class="code-v">first</span><span class="code-s">] </span><span class="code-s">+ </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">[</span><span class="code-v">second</span><span class="code-s">]</span><span class="code-s">) </span><span class="code-s">/ </span><span class="code-d">2.0f</span><span class="code-s">;
+
+					</span><span class="code-v">currentVertCount </span><span class="code-s">+</span><span class="code-s">= </span><span class="code-d">1</span><span class="code-s">;
+				</span><span class="code-s">}
+
+				</span><span class="code-v">midpoints</span><span class="code-s">[e</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">triangle</span><span class="code-s">-</span><span class="code-s">&gt</span><span class="code-w">second</span><span class="code-s">;
+			</span><span class="code-s">}
+
+			</span><span class="code-r">int </span><span class="code-v">mid0 </span><span class="code-s">= </span><span class="code-v">midpoints</span><span class="code-s">[</span><span class="code-d">0</span><span class="code-s">]</span><span class="code-s">;
+			</span><span class="code-r">int </span><span class="code-v">mid1 </span><span class="code-s">= </span><span class="code-v">midpoints</span><span class="code-s">[</span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">;
+			</span><span class="code-r">int </span><span class="code-v">mid2 </span><span class="code-s">= </span><span class="code-v">midpoints</span><span class="code-s">[</span><span class="code-d">2</span><span class="code-s">]</span><span class="code-s">;
+
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t</span><span class="code-s">]</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid0</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid2</span><span class="code-s">;
+
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">]</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid1</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid0</span><span class="code-s">;
+
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">]</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid2</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">currentIndexCount</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid1</span><span class="code-s">;
+
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t</span><span class="code-s">]     </span><span class="code-s">= </span><span class="code-v">mid0</span><span class="code-s">; </span><span class="code-c">// Overwrite the original triangle with the 4th new triangle
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid1</span><span class="code-s">;
+			</span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">t </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">mid2</span><span class="code-s">;
+		</span><span class="code-s">}
+	</span><span class="code-s">}
+
+	</span><span class="code-c">// Normalize all the positions to create the sphere
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3</span><span class="code-s">& </span><span class="code-v">pos </span><span class="code-s">: </span><span class="code-v">sphere</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-v">pos </span><span class="code-s">= </span><span class="None"></span><span class="code-f">normalize</span><span class="code-s">(</span><span class="code-v">pos</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-j">return sphere</span><span class="code-s">;
+</span><span class="code-s">}
+</span></pre>
+		</div>
+	
 			</div>
 		</div>
 	</div>
 
 	<script src="../../projects/mesh/p5.min.js"></script>
-	<script src="../../projects/mesh/script.js"></script>
+	<script src="../../projects/mesh/draw_shape.js"></script>
 	<script src="../../projects/mesh/icosphere.js"></script>
 </body>
 

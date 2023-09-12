@@ -5,8 +5,8 @@ function initUvSphere(sketch) {
 	slider_resLon_uvs = sketch.createSlider(2, 32, 16);
 	slider_resLat_uvs = sketch.createSlider(2, 32, 8);
 
-	slider_resLon_uvs.parent('uvsphere-tools-resLon');
-	slider_resLat_uvs.parent('uvsphere-tools-resLat');
+	addTool('uvsphere', 'Resolution Longitude', slider_resLon_uvs);
+	addTool('uvsphere', 'Resolution Latitude', slider_resLat_uvs);
 
 	return [slider_resLon_uvs, slider_resLat_uvs];
 }
@@ -73,4 +73,27 @@ function makeUvSphere(sketch, lonCount = -1, latCount = -1) {
 	return [indices, verts, uvs];
 }
 
-startSketch(initUvSphere, makeUvSphere, 'uvsphere');
+function getUVSphereTable() {
+	function v(x, z) {
+		return (x + 1) * (z + 1);
+	}
+
+	function i(x, z) {
+		return x * z * 6;
+	}
+
+	let table = [
+		["X", "Z", "Vertx", "Index"],
+		[1, 1, v(1, 1), i(1, 1)],
+		[1, 2, v(1, 2), i(1, 2)],
+		[1, 3, v(1, 3), i(1, 3)],
+		[2, 2, v(2, 2), i(2, 2)],
+		[2, 3, v(2, 3), i(2, 3)],
+		[5, 5, v(5, 5), i(5, 5)],
+		[10, 10, v(10, 10), i(10, 10)]
+	];
+
+	return table;
+}
+
+startSketch(initUvSphere, makeUvSphere, getUVSphereTable, 'uvsphere');

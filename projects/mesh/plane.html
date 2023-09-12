@@ -1,5 +1,5 @@
 <html lang="en">
-
+ 
 <head>
 	<title>Plane</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,6 +7,8 @@
 	<link rel="stylesheet" href="../../styles/global.css" />
 	<link rel="stylesheet" href="../../styles/top.css" />
 	<link rel="stylesheet" href="../../styles/card.css" />
+	<link rel="stylesheet" href="../../styles/code.css" />
+	<link rel="stylesheet" href="../../styles/article.css" />
 	<link rel="stylesheet" href="../../projects/mesh/style.css">
 </head>
 
@@ -25,9 +27,9 @@
 			<h1 class="title">Winter</h1>
 			<div class="nav-section">
 				<div class="nav-links">
-					<a class="nav-link" href="../../articles.html">Articles</a>
-					<a class="nav-link" href="../../projects.html">Projects</a>
-					<a class="nav-link" href="../../support.html">Support</a>
+					<a class="nav-link" href="../../articles">Articles</a>
+					<a class="nav-link" href="../../projects">Projects</a>
+					<a class="nav-link" href="../../support">Support</a>
 				</div>
 
 				<hr class="nav-separator" />
@@ -40,36 +42,116 @@
 		<script src="../../scripts/toggle_dark.js"></script>
 	
 		<div class="page">
-			<h1 class="page-title">Mesh / Plane</h1>
-			<div class="shape-article">
-				<div class="shape-article-text">
-					<p>This is a tes</p>
-				</div>
-			
+			<h1 class="page-title"><a href="../..//projects/mesh">Mesh</a> / Plane</h1>
+			<div class="draw-left-line">
+				<p class="article-code-file mark-section">Shape</p>
 				<div class="shape-side-panel">
 					
-			<div class="shape-side-panel-top">
-				<div id="plane"></div>
-				<h3 class="shape-side-panel-name">Plane</h3>
-		
-				<div class="shape-tool" id="plane-tools-resX">
-					<p>Resolution X</p>
+		<div id="plane"></div>
+		<div id="plane-tools"></div>
+	
 				</div>
-			
-				<div class="shape-tool" id="plane-tools-resZ">
-					<p>Resolution Z</p>
-				</div>
-			
 			</div>
-			<table id="shape-table" class="shape-side-panel-table"></table>
-		
-				</div>
+
+			<div class="shape-article-text">
+				<p>This is a test</p>
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Plane.h</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-a">#pragma once
+
+</span><span class="code-a">#include </span><span class="code-l">"glm/vec3.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="code-l">"glm/vec2.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="code-l">"glm/geometric.hpp</span><span class="code-q">"
+</span><span class="code-a">#include </span><span class="None"></span><span class="code-l">&lt</span><span class="None"></span><span class="code-l">vector</span><span class="None"></span><span class="code-l">&gt
+
+</span><span class="code-r">using namespace </span><span class="code-w">glm</span><span class="code-s">;
+
+</span><span class="code-r">struct </span><span class="code-t">Plane </span><span class="code-s">{
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-r">int</span><span class="code-s">&gt </span><span class="code-w">index</span><span class="code-s">;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-w">pos</span><span class="code-s">;
+	</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">vector</span><span class="code-s">&lt</span><span class="code-t">vec2</span><span class="code-s">&gt </span><span class="code-w">uvs</span><span class="code-s">;
+</span><span class="code-s">}</span><span class="code-s">;
+
+</span><span class="code-t">Plane </span><span class="None"></span><span class="code-f">MakePlane</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">xCount</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yCount</span><span class="code-s">)</span><span class="code-s">;
+</span></pre>
+		</div>
+	
+		<div class="article-code draw-left-line">
+			<p class="article-code-file mark-section">Plane.cpp</p>
+			<pre class="article-code-text cpp">
+</span><span class="code-a">#include </span><span class="code-l">"plane.h</span><span class="code-q">"
+
+</span><span class="code-t">Plane </span><span class="None"></span><span class="code-f">MakePlane</span><span class="code-s">(</span><span class="code-r">int </span><span class="code-a">xCount</span><span class="code-s">, </span><span class="code-r">int </span><span class="code-a">yCount</span><span class="code-s">) </span><span class="code-s">{
+	</span><span class="code-c">// For each count in either direction, two triangles are added to the mesh.
+	</span><span class="code-c">// The xCount and yCount are the number of quads, not vertices, so one more vertex is needed in each direction.
+
+	</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-a">xCount </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0 </span><span class="code-s">|</span><span class="code-s">| </span><span class="code-a">yCount </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-j">return </span><span class="code-s">{</span><span class="code-s">}</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">totalIndexCount </span><span class="code-s">= </span><span class="code-d">6 </span><span class="code-s">* </span><span class="code-a">xCount </span><span class="code-s">* </span><span class="code-a">yCount</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">int </span><span class="code-v">totalVertexCount </span><span class="code-s">= </span><span class="code-s">(</span><span class="code-a">xCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-s">(</span><span class="code-a">yCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">;
+
+	</span><span class="code-r">const </span><span class="code-t">vec3 </span><span class="code-v">offset </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-s">-</span><span class="code-d">1</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">)</span><span class="code-s">; </span><span class="code-c">// Make the plane span (-1, -1, 0) to (1, 1, 0)
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">xStep </span><span class="code-s">= </span><span class="code-d">2.0f </span><span class="code-s">/ </span><span class="code-a">xCount</span><span class="code-s">;
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">yStep </span><span class="code-s">= </span><span class="code-d">2.0f </span><span class="code-s">/ </span><span class="code-a">yCount</span><span class="code-s">;
+
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">uStep </span><span class="code-s">= </span><span class="code-d">1.0f </span><span class="code-s">/ </span><span class="code-a">xCount</span><span class="code-s">; </span><span class="code-c">// But UVs always span (0, 0) to (1, 1)
+	</span><span class="code-r">const </span><span class="code-r">float </span><span class="code-v">vStep </span><span class="code-s">= </span><span class="code-d">1.0f </span><span class="code-s">/ </span><span class="code-a">yCount</span><span class="code-s">;
+
+	</span><span class="code-t">Plane </span><span class="code-v">plane</span><span class="code-s">;
+
+	</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalIndexCount</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalVertexCount</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">.</span><span class="None"></span><span class="code-f">resize</span><span class="code-s">(</span><span class="code-v">totalVertexCount</span><span class="code-s">)</span><span class="code-s">;
+
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">x </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">x </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-a">xCount</span><span class="code-s">; </span><span class="code-v">x</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">y </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">y </span><span class="code-s">&lt</span><span class="code-s">= </span><span class="code-a">yCount</span><span class="code-s">; </span><span class="code-v">y</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">)
+	</span><span class="code-s">{
+		</span><span class="code-r">int </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-v">y </span><span class="code-s">+ </span><span class="code-v">x </span><span class="code-s">* </span><span class="code-s">(</span><span class="code-a">yCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">)</span><span class="code-s">;
+
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">pos</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-t">vec3</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">* </span><span class="code-v">xStep</span><span class="code-s">, </span><span class="code-v">y </span><span class="code-s">* </span><span class="code-v">yStep</span><span class="code-s">, </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">+ </span><span class="code-v">offset</span><span class="code-s">;
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">uvs</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-t">vec2</span><span class="code-s">(</span><span class="code-v">x </span><span class="code-s">* </span><span class="code-v">uStep</span><span class="code-s">, </span><span class="code-s">(</span><span class="code-a">yCount </span><span class="code-s">- y</span><span class="code-s">) </span><span class="code-s">* </span><span class="code-v">vStep</span><span class="code-s">)</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-c">//        --------- xCount ---------&gt
+	</span><span class="code-c">//        v          v + 1        v + 2
+	</span><span class="code-c">//    |   *------------*------------*
+	</span><span class="code-c">//    |   |          / |          / |
+	</span><span class="code-c">// yCount |       /    |       /    |
+	</span><span class="code-c">//    |   |    /       |    /       |
+	</span><span class="code-c">//   \ /  | /          | /          |
+	</span><span class="code-c">//        *------------*------------*
+	</span><span class="code-c">//    v + yc + 1   v + yc + 2   v + yc + 3
+
+	</span><span class="code-r">int </span><span class="code-v">i </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">;
+	</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-r">int </span><span class="code-v">v </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">; </span><span class="code-v">v </span><span class="code-s">&lt </span><span class="code-v">totalVertexCount </span><span class="code-s">- </span><span class="code-a">yCount </span><span class="code-s">- </span><span class="code-d">2</span><span class="code-s">; </span><span class="code-v">v</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">) </span><span class="code-s">{
+		</span><span class="code-c">// If at the final row, jump to next column
+		</span><span class="code-j">if </span><span class="code-s">(</span><span class="code-s">(</span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">% </span><span class="code-s">(</span><span class="code-a">yCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">) </span><span class="code-s">=</span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">) </span><span class="code-s">{
+			</span><span class="code-v">v</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">;
+		</span><span class="code-s">}
+
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v</span><span class="code-s">;
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-a">yCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-a">yCount </span><span class="code-s">+ </span><span class="code-d">2</span><span class="code-s">;
+		</span><span class="code-v">plane</span><span class="code-s">.</span><span class="code-w">index</span><span class="code-s">[</span><span class="code-v">i</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">v </span><span class="code-s">+ </span><span class="code-a">yCount </span><span class="code-s">+ </span><span class="code-d">1</span><span class="code-s">;
+	</span><span class="code-s">}
+
+	</span><span class="code-j">return </span><span class="code-v">plane</span><span class="code-s">;
+</span><span class="code-s">}
+</span></pre>
+		</div>
+	
 			</div>
 		</div>
 	</div>
 
 	<script src="../../projects/mesh/p5.min.js"></script>
-	<script src="../../projects/mesh/script.js"></script>
+	<script src="../../projects/mesh/draw_shape.js"></script>
 	<script src="../../projects/mesh/plane.js"></script>
 </body>
 
