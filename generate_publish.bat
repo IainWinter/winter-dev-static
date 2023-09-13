@@ -1,4 +1,4 @@
-python .\generator\main.py ..\published\
+python .\generator\make.py ..\published\
 
 cd ..\published\
 git add *

@@ -1,1 +1,1 @@
-python .\generator\main.py ..\published\ local
+python .\generator\make.py ..\published\ local

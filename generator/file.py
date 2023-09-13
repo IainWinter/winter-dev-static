@@ -25,6 +25,20 @@ def copy_changed_files(source_dir, target_dir):
 				shutil.copy2(source_path, target_path)
 				print(f"Copied: {source_path} -> {target_path}")
 
+def are_sources_new(file_dest: str, files: []) -> bool:
+    if not os.path.exists(file_dest):
+        return False
+
+    dest_mtime = os.path.getmtime(file_dest)
+
+    for file in files:
+        if os.path.exists(file):
+            file_mtime = os.path.getmtime(file)
+            if file_mtime > dest_mtime:
+                return True
+
+    return False
+
 #
 # file cache
 #

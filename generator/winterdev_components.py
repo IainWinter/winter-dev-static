@@ -37,7 +37,7 @@ def sub_title(io, text):
 	id = text.split(' ', 1)[0] # use first word as id
 
 	io.write(f'''
-		<h2 class="article-subtitle mark-section" id={id}>
+		<h2 class="article-subtitle mark-section" id="{id}">
 			{text}
 			<a class="article-subtitle-id-link" href="#{id}">#</a>
 		</h2>
@@ -151,13 +151,13 @@ def card_html(io, meta, slug_href_root):
 	
 	if "thumbnail" in meta:
 		thumbnail_src = ref(f'~/thumbnails/{meta["thumbnail"]}')
-		thumbnail_dom = f'<a href={href}><img class="article-card-thumb" src="{thumbnail_src}" /></a>'
+		thumbnail_dom = f'<a href="{href}"><img class="article-card-thumb" src="{thumbnail_src}" /></a>'
 
 	io.write(f'''
 		<div class="article-card">
 			{thumbnail_dom}
 			<div class="article-card-text">
-				<a class="article-card-text-link" href={href}>{title}</a>
+				<a class="article-card-text-link" href="{href}">{title}</a>
 				<p class="article-card-text-date">{date_str}</p>
 			</div>
 		</div>
@@ -207,7 +207,7 @@ def shapes_html(io, shape_names, context):
 
 
 def shape_title_html(io, title):
-	io.write(f'<h1 class="page-title"><a href="{ref_page("/projects/mesh")}">Mesh</a> / {title}</h1>')
+	io.write(f'<h1 class="page-title"><a href="{ref_page("projects/mesh")}">Mesh</a> / {title}</h1>')
 
 def shape_tools_html(io, shape):
 	io.write(f'''

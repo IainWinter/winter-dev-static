@@ -29,7 +29,14 @@ def render_site(config):
 		page_outfile = page["outdir"] + page["meta"]["slug"]
 		page_outdir = os.path.dirname(page_outfile)
 		page_to_root = (os.path.relpath('./', page_outdir) + '/').replace('\\', '/')
-		outfile = config["outdir"] + page_outfile + config["file_ext"] 
+		outfile = config["outdir"] + page_outfile + ".html" #config["file_ext"] 
+
+		# files = []
+		# files.append(page["template"])			
+
+		# if not are_sources_new(outfile, [page["template"]]):
+		# 	print(f"Skipped: {page_outfile}")
+		# 	continue
 
 		set_export_root_dir(page_to_root)
 		render = render_page(page, context)
@@ -43,8 +50,8 @@ def render_site(config):
 #
 
 config = {
-	"file_ext": ".html",
-	"outdir": "../text/",
+	"file_ext": "",
+	"outdir": "../published/",
 	"staticdir": "./static/",
 	"pages": [
 		{

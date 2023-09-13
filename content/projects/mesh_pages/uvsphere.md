@@ -57,7 +57,7 @@ static const float `n`pi = 3.1415927f;
 			);
 
 			`v`sphere.`w`uvs[`v`currentVertex] = vec2(
-				1.f - (float)`v`lon / `a`lonCount,
+				(float)`v`lon / `a`lonCount,
 				(float)`v`lat / `a`latCount
 			);
 
