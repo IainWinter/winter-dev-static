@@ -73,6 +73,7 @@ h4 {
 
 .page {
 	padding: var(--pad);
+	padding-top: calc(var(--pad) + 5px);
 
 	max-width: 900px;
 	overflow: hidden;
