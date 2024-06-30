@@ -209,7 +209,9 @@
 	}
 
 	function setParentFrameHeight() {
-		window.parent.postMessage({ reason: "setHeight", height: document.body.scrollHeight }, '*');
+		// On new chrome this broke because the dom edit doesn't update the scrollheight before this is called
+		// so add a tiny delay :)
+		setTimeout(function() { window.parent.postMessage({ reason: "setHeight", height: document.body.scrollHeight }, '*'); }, 200);
 	}
 
 	function setParentScrollToComments() {
