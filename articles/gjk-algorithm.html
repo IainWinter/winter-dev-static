@@ -239,6 +239,8 @@
 
 	</span><span class="code-t">Simplex</span><span class="code-s">& </span><span class="code-s">operator=</span><span class="code-s">(</span><span class="code-n">std</span><span class="code-s">::</span><span class="code-t">initializer_list</span><span class="code-s">&lt</span><span class="code-t">vec3</span><span class="code-s">&gt </span><span class="code-a">list</span><span class="code-s">) 
 	</span><span class="code-s">{
+		</span><span class="code-w">m_size </span><span class="code-s">= </span><span class="code-d">0</span><span class="code-s">;
+
 		</span><span class="code-j">for </span><span class="code-s">(</span><span class="code-t">vec3 </span><span class="code-v">point </span><span class="code-s">: </span><span class="code-a">list</span><span class="code-s">)
 			</span><span class="code-w">m_points</span><span class="code-s">[</span><span class="code-w">m_size</span><span class="code-s">+</span><span class="code-s">+</span><span class="code-s">] </span><span class="code-s">= </span><span class="code-v">point</span><span class="code-s">;
 
