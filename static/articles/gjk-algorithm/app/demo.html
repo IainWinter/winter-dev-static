@@ -56,7 +56,7 @@
 
 	let resolve = false;
 
-	let showcontrolls = true;
+	let showcontrols = true;
 
 	let sizeDebug = 11;
 	let sizeLineDebug = 1;
@@ -162,8 +162,8 @@
 		let s2 = s - 10;
 		textSize(s);
 
-		if(showcontrolls) {
-			text("Controlls:", -width/2 + 15, height/2-s*7+s2);
+		if(showcontrols) {
+			text("Controls:", -width/2 + 15, height/2-s*7+s2);
 			text("Key 0-5/+-: Debug level/iteration", -width/2 + 15, height/2-s*6+s2);
 			text("Key R/T: Toggle response/randomize shapes", -width/2 + 15, height/2-s*5+s2);
 			text("Arrow keys: Move shape B (Key S: Slowmo)", -width/2 + 15, height/2-s*4+s2);
@@ -242,7 +242,7 @@
 		}
 
 		else if(event.keyCode === 72) {
-			showcontrolls = !showcontrolls;
+			showcontrols = !showcontrols;
 		}
 
 		else if(event.keyCode === 84) {

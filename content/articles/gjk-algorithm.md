@@ -127,6 +127,8 @@ public:
 
 	`t`Simplex& operator=(std::initializer_list<vec3> `a`list) 
 	{
+		m_size = 0;
+
 		for (vec3 `v`point : `a`list)
 			m_points[m_size++] = `v`point;
 
