@@ -1,4 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&family=Source+Code+Pro:wght@400;700&display=swap');
+@font-face {
+	font-family: 'Nanum Myeongjo';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("../fonts/NanumMyeongjo400.woff2") format('woff2');
+}
+
+@font-face {
+	font-family: 'Nanum Myeongjo';
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("../fonts/NanumMyeongjo700.woff2") format('woff2');
+}
 
 :root {
 	--pad: 100px;
@@ -13,7 +27,7 @@
 	--accent-color-light: rgba(255, 255, 255, .05);
 	--accent-color: rgba(255, 255, 255, .2);
 
-	/* these are always relitive to css file */
+	/* these are always relative to css file */
 
 	--youtube-icon: url("../icons/yt.svg");
 	--mark-icon: url("../icons/mark.png");
@@ -73,6 +87,7 @@ h4 {
 
 .page {
 	padding: var(--pad);
+	padding-top: calc(var(--pad) + 5px);
 
 	max-width: 900px;
 	overflow: hidden;
@@ -87,7 +102,6 @@ h4 {
 
 .page-title {
 	margin: 0 0 var(--pad) 0;
-	/* font-size: 58px; */
 	font-size: 50px;
 }
 
