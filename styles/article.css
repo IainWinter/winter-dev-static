@@ -101,11 +101,11 @@
 	font-weight: 700;
 }
 
-/* @media (max-width: 1200px) { */
+@media (max-width: 1200px) {
 	.article {
 		padding-left: var(--pad);
 	}
-/* } */
+}
 
 @media (max-width: 500px) {
 	.math-display {

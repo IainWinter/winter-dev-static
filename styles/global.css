@@ -89,8 +89,6 @@ h4 {
 	padding: var(--pad);
 	padding-top: calc(var(--pad) + 5px);
 
-	margin: 0 auto;
-	
 	max-width: 900px;
 	overflow: hidden;
 
@@ -128,7 +126,7 @@ h4 {
 	border-left: 5px solid var(--text-color);
 }
 
-/* @media (max-width: 1200px) { */
+@media (max-width: 1200px) {
 	:root {
 		--pad: 50px;
 		--half: 0px;
@@ -143,7 +141,7 @@ h4 {
 	.main {
 		flex-direction: column;
 	}
-/* } */
+}
 
 @media (max-width: 700px) {
 	:root {
