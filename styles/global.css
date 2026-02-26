@@ -89,8 +89,9 @@ h4 {
 	padding: var(--pad);
 	padding-top: calc(var(--pad) + 5px);
 
+	margin: 0 auto;
+	
 	max-width: 900px;
-	margin: auto 0;
 	overflow: hidden;
 
 	font-weight: 700;
