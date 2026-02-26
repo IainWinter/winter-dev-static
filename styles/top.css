@@ -73,7 +73,7 @@
 	border-radius: 100%;
 }
 
-@media (max-width: 1200px) {
+/* @media (max-width: 1200px) { */
 	.top {
 		height: unset;
 		width: 100%;
@@ -141,7 +141,7 @@
 		border: none;
 		border-left: 1px solid var(--accent-color);
 	}
-}
+/* } */
 
 @media (max-width: 460px) {
 	.nav-links {
