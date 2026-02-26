@@ -46,7 +46,7 @@
 				<hr class="nav-separator" />
 
 				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="../icons/light_off.svg" onclick="toggleDark();"/>
+					<img id="toggle-dark-icon" src="../icons/light_off.svg" alt="light/dark mode button" onclick="toggleDark();"/>
 				</div>
 			</div>
 		</div>
@@ -121,11 +121,11 @@
 		</div>
 	<p>Note the use of pointers, this forces other systems to take care of the actual storing of objects, leaving the physics engine to worry about physics, not memory allocation.</p><p>With this you can simulate all sorts of stuff from objects flying through the sky to solar systems.</p>
 		<span class="article-embed article-embed-thumb-yt-icon">
-			<img class="article-embed-thumb" src="../thumbnails/crKrkn-RIOU.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/crKrkn-RIOU?rel=0&modestbranding=1&autoplay=1')"></img>
+			<img class="article-embed-thumb" src="../thumbnails/crKrkn-RIOU.jpg" alt="A youtube video thumbnail" onclick="swapIframe(this, 'https://www.youtube.com/embed/crKrkn-RIOU?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	
 		<span class="article-embed article-embed-thumb-yt-icon">
-			<img class="article-embed-thumb" src="../thumbnails/sHZEs-oQTI4.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/sHZEs-oQTI4?rel=0&modestbranding=1&autoplay=1')"></img>
+			<img class="article-embed-thumb" src="../thumbnails/sHZEs-oQTI4.jpg" alt="A youtube video thumbnail" onclick="swapIframe(this, 'https://www.youtube.com/embed/sHZEs-oQTI4?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>You can do a lot with this, but it's the easy part to be honest, and that's not what you came for...</p>
 		<h2 class="article-subtitle mark-section" id="Collision">
@@ -517,7 +517,7 @@
 		</div>
 	<p>In the last section the meat was in the design, this one leans much more towards what kinds of solvers you implement. I've made an impulse & position solver myself that seem to work for most situations. To keep this short, I won't cover the math here, but you can check out the source for the impulse solver <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/src/physics/Dynamics/ImpulseSolver.cpp">here</a>, and the position solver <a class="underline" target="_blank" href="https://github.com/IainWinter/IwEngine/blob/3e2052855fea85718b7a499a7b1a3befd49d812b/IwEngine/src/physics/Dynamics/SmoothPositionSolver.cpp">here</a> if you are interested.</p><p>Let's see a demo!</p>
 		<span class="article-embed article-embed-thumb-yt-icon">
-			<img class="article-embed-thumb" src="../thumbnails/Q_KAqCmEgyA.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/Q_KAqCmEgyA?rel=0&modestbranding=1&autoplay=1')"></img>
+			<img class="article-embed-thumb" src="../thumbnails/Q_KAqCmEgyA.jpg" alt="A youtube video thumbnail" onclick="swapIframe(this, 'https://www.youtube.com/embed/Q_KAqCmEgyA?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	
 		<h2 class="article-subtitle mark-section" id="More">
@@ -705,7 +705,7 @@
 		</div>
 	<p>Now we have a whole stack of options that the user can configure for many different scenarios with a simple yet powerful API.</p><p>There is one more option that I want to cover. The physics world has no need updating every frame. Say a game like CS:GO gets rendered at 300 fps. It's not checking the physics every frame; it might run at 50 Hz instead. If the game only used the positions from the physics engine, objects would have .02 seconds between each update, causing a jittery look. And that's an ideal rate, some games will only update at 20 Hz leaving .05 seconds between update!</p>
 		<span class="article-embed article-embed-thumb-yt-icon">
-			<img class="article-embed-thumb" src="../thumbnails/_-cXkPp-aYw.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/_-cXkPp-aYw?rel=0&modestbranding=1&autoplay=1')"></img>
+			<img class="article-embed-thumb" src="../thumbnails/_-cXkPp-aYw.jpg" alt="A youtube video thumbnail" onclick="swapIframe(this, 'https://www.youtube.com/embed/_-cXkPp-aYw?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>To get around this, it is common to split the physics world from the rendered world. This is simply done by using a raw Transform instead of a pointer and having a system outside the physics interpolate the position every frame. Let's see how we might implement this.</p><p>First, we'll get rid of that pointer. We'll need to add a last transform as well which will gets set just before the update in MoveObjects.</p>
 		<div class="article-code draw-left-line">
@@ -761,7 +761,7 @@
 		</div>
 	<p>This system smoothy moves the objects between their positions in the physics engines every frame, removing all jittery artifacts from the movement.</p>
 		<span class="article-embed article-embed-thumb-yt-icon">
-			<img class="article-embed-thumb" src="../thumbnails/0xJ-oRCPRk8.jpg" onclick="swapIframe(this, 'https://www.youtube.com/embed/0xJ-oRCPRk8?rel=0&modestbranding=1&autoplay=1')"></img>
+			<img class="article-embed-thumb" src="../thumbnails/0xJ-oRCPRk8.jpg" alt="A youtube video thumbnail" onclick="swapIframe(this, 'https://www.youtube.com/embed/0xJ-oRCPRk8?rel=0&modestbranding=1&autoplay=1')"></img>
 		</span>
 	<p>And that's the final result. I hope you can use the principles from this article to get a better idea of how to lay out complex systems in nimble ways, or even make your own engine. There is a lot more to cover, but I'll leave it to a part 2 because this is getting long. Let me know what you thought, should I keep focusing on design, or dive deeper into the math behind the implementations?</p><p>Thanks for reading, I hope to catch you next time!
 			
