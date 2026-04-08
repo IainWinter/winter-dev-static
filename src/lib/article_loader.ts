@@ -6,6 +6,7 @@ export type ArticleMetadata = {
     slug: string;
     thumbnail?: string;
     title: string;
+    published: boolean;
     date: string;
 };
 
@@ -21,13 +22,15 @@ function getArticleMetadata(path: string): ArticleMetadata {
         slug: `articles/${slug}`,
         title: raw.title,
         thumbnail: raw.thumbnail ?? null,
+        published: (raw.published ?? "true") === "true",
         date: raw.date ?? "",
     }));
 }
 
 export function getArticles(): ArticleMetadata[] {
     return listDirectory(ARTICLES_DIR)
-        .map((f) => getArticleMetadata(f))
+        .map(f => getArticleMetadata(f))
+        .filter(d => d.published)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
