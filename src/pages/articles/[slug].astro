@@ -1,0 +1,20 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Article from '../../components/Article.astro';
+import SubTitle from '../../components/SubTitle.astro';
+import CommentSection from '../../components/CommentSection.astro';
+import { getArticleBySlug, getArticleSlugs } from '../../lib/article_loader';
+
+export function getStaticPaths() {
+    return getArticleSlugs().map(({ slug }) => ({ params: { slug } }));
+}
+
+const { slug } = Astro.params;
+const content = getArticleBySlug(slug!);
+---
+
+<Layout>
+    <Article content={content} />
+    <SubTitle id="comments" text="Comments" />
+    <CommentSection subject={slug!} />
+</Layout>

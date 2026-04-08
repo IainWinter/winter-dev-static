@@ -1,0 +1,121 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageTitle from '../components/PageTitle.astro';
+import Article from '../components/Article.astro';
+import { partition } from '@/lib/utils';
+import { getDevlogs } from '@/lib/devlog_loader';
+
+const [page, devlogs] = partition(getDevlogs(), d => d.title === "page");
+---
+
+<Layout title="Regolith - Winter">
+    <PageTitle title="Regolith" />
+    <Article content={page[0]!.content} />
+
+    <div class="timeline">
+        {
+            devlogs.map(devlog => (
+            <div class="node">
+                <div class="node-inner">
+                    <span class="node-mark" />
+                    <div class="node-content">
+                        <div class="node-top">
+                            <p class="node-title">{devlog.title}</p>
+                            <p class="node-date">{devlog.date}</p>
+                        </div>
+                        <Article content={devlog.content} />
+                    </div>
+                </div>
+            </div>
+            ))
+        }
+
+        <div class="node">
+            <div class="node-inner">
+                <span class="node-mark-final" />
+            </div>
+        </div>
+    </div>
+</Layout>
+
+
+<style>
+    .timeline {
+        font-weight: bold;
+    }
+    
+    .node {
+        position: relative;
+        margin-left: -1.25rem;
+    }
+    
+    .node-inner {
+        display: flex;
+        gap: .25rem;
+    }
+
+    .node-mark {
+        flex-shrink: 0;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid var(--color-text);
+        margin-top: 1.25rem;
+    }
+
+    .node-mark::before {
+        content: "";
+        position: absolute;
+        top: 2.25rem;
+        left: .5rem;
+        width: 1px;
+        height: calc(100% - 1rem);
+        background: var(--color-text);
+    }
+
+    .node-mark-final {
+        flex-shrink: 0;
+        width: 1rem;
+        height: 1rem;
+        background: var(--color-text);
+        margin-top: 1.25rem;
+    }
+
+    .node-mark-text {
+        /* writing-mode: vertical-lr; */
+        position: absolute;
+        top: -.5rem;
+        left: 25px;
+        font-size: 2rem;
+    }
+
+    .node-top {
+        margin-top: .5rem;
+    }
+
+    .node-title {
+        font-size: 2rem;
+    }
+
+    .node-date {
+        font-size: 1rem;
+        opacity: .5;
+    }
+
+    .node-content {
+        padding-bottom: 2rem;
+    }
+
+    p {
+        margin: 0;
+    }
+
+    @media (min-width: 640px) {
+        .node {
+            margin-left: -2rem;
+        }
+        
+        .node-inner {
+            gap: 1rem;
+        }
+    }
+</style>

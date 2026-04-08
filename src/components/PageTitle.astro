@@ -1,0 +1,22 @@
+---
+interface Props {
+    title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<p class="page-title">{title}</p>
+
+<style>
+    .page-title {
+        font-size: 3rem;
+        margin: 0 0 1.75rem 0;
+    }
+
+    @media (min-width: 640px) {
+        .page-title {
+            margin: 0 0 3.5rem 0;
+        }
+    }
+</style>

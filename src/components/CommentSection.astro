@@ -1,0 +1,86 @@
+---
+interface Props {
+    subject: string;
+}
+
+const { subject } = Astro.props;
+const src = `/external/comments.html?host=https://api.winter.dev/comments&subject=${subject}`;
+---
+
+<div id="comment-scroll-target"></div>
+<iframe
+    id="comment-frame"
+    scrolling="no"
+    class="comment-frame"
+    src={src}
+></iframe>
+
+<script>
+    let cleanup: (() => void) | null = null;
+
+    function init() {
+        cleanup?.();
+        cleanup = null;
+
+        const frame = document.getElementById('comment-frame') as HTMLIFrameElement | null;
+        if (!frame) {
+            return;
+        }
+
+        const scrollTarget = document.getElementById('comment-scroll-target');
+        const controller = new AbortController();
+
+        function getTheme() {
+            return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        }
+
+        function sendTheme() {
+            if (!frame) {
+                return;
+            }
+
+            frame.contentWindow?.postMessage({ theme: getTheme() }, '*');
+        }
+
+        window.addEventListener('message', (e: MessageEvent) => {
+            const data = e.data;
+            if (!data || typeof data !== 'object') return;
+
+            switch (data.reason) {
+                case 'setHeight':
+                    frame.height = data.height;
+                    break;
+                case 'askTheme':
+                    sendTheme();
+                    break;
+                case 'setScrollToComments':
+                    scrollTarget?.scrollIntoView();
+                    break;
+            }
+        }, { signal: controller.signal });
+
+        // If iframe already loaded before init() ran (hard reload race), send now.
+        // If it hasn't loaded yet, the load listener catches it.
+        frame.addEventListener('load', sendTheme, { signal: controller.signal });
+        sendTheme();
+
+        const themeObserver = new MutationObserver(sendTheme);
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        cleanup = () => {
+            controller.abort();
+            themeObserver.disconnect();
+        };
+    }
+
+    document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+    .comment-frame {
+        margin-left: -15px;
+        width: calc(100% + 15px);
+        border: none;
+        display: block;
+    }
+</style>

@@ -1,0 +1,200 @@
+/* ===== Fonts ===== */
+
+@font-face {
+    font-family: "Nanum Myeongjo";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/fonts/NanumMyeongjo400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Nanum Myeongjo";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/fonts/NanumMyeongjo700.woff2") format("woff2");
+}
+
+:root {
+    --color-background: white;
+    --color-background-html: white;
+    --color-text: black;
+    --color-link: cyan;
+    --color-accent: rgba(0, 0, 0, 0.2);
+    --color-accent-soft: rgba(0, 0, 0, 0.05);
+    --accent-color-light: rgba(0, 0, 0, 0.05);
+    --youtube-icon: url('/icons/yt.svg');
+}
+
+:root.dark {
+    --color-background: linear-gradient(110deg, rgba(2, 0, 36, 0.2) -100%, rgba(95, 95, 128, 0.3) 100%);
+    --color-background-html: black;
+    --color-text: whitesmoke;
+    --color-link: cyan;
+    --color-accent: rgba(255, 255, 255, 0.2);
+    --color-accent-soft: rgba(255, 255, 255, 0.05);
+    --accent-color-light: rgba(255, 255, 255, 0.05);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+    font-family: "Nanum Myeongjo", serif;
+    color: var(--color-text);
+    background: var(--color-background-html);
+    transition: color 0.4s, background 0.4s;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-background);
+    transition: background 0.4s;
+}
+
+a {
+    color: inherit;
+}
+
+iframe {
+    color-scheme: normal;
+}
+
+* {
+    scrollbar-color: var(--color-accent) transparent;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+}
+
+.page-container {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1rem 8rem;
+}
+
+@media (min-width: 640px) {
+    .page-container {
+        padding-left: 5rem;
+        padding-right: 5rem;
+    }
+}
+
+.image-rendering-pixelated {
+    image-rendering: pixelated;
+}
+
+.mark-section {
+    margin-left: -15px;
+    padding-left: 10px;
+    border-left: 5px solid var(--color-text);
+}
+
+.mark-section-draw-line {
+    margin-left: -10px;
+    padding-left: 10px;
+    border-left: 1px solid var(--color-accent);
+}
+
+.yt-icon {
+    background: url("/icons/yt.svg");
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.theme-icon {
+    content: url("/icons/light_off.svg");
+}
+
+html.light .theme-icon {
+    content: url("/icons/light_on.svg");
+}
+
+.cpp .code-w { color: #dadada; }
+.cpp .code-s { color: #b4b4b4; }
+.cpp .code-a { color: #9a9a9a; }
+.cpp .code-n { color: #c8c8c8; }
+.cpp .code-v { color: #9cdcfe; }
+.cpp .code-c { color: #57a64a; }
+.cpp .code-r { color: #569cd6; }
+.cpp .code-j { color: #d8a0df; }
+.cpp .code-t { color: #4ec9b0; }
+.cpp .code-f { color: #dcdcaa; }
+.cpp .code-d { color: #b5cea8; }
+.cpp .code-p { color: #beb7ff; }
+.cpp .code-l { color: #d69d85; }
+.cpp .code-q { color: #d69d85; }
+
+:root.light .cpp .code-w { color: black; }
+:root.light .cpp .code-s { color: black; }
+:root.light .cpp .code-a { color: gray; }
+:root.light .cpp .code-n { color: black; }
+:root.light .cpp .code-v { color: #1f377f; }
+:root.light .cpp .code-c { color: green; }
+:root.light .cpp .code-r { color: blue; }
+:root.light .cpp .code-j { color: #8f08c4; }
+:root.light .cpp .code-t { color: #2b91af; }
+:root.light .cpp .code-f { color: #74531f; }
+:root.light .cpp .code-d { color: black; }
+:root.light .cpp .code-p { color: #8a1bff; }
+:root.light .cpp .code-l { color: #a31515; }
+:root.light .cpp .code-q { color: #e21f1f; }
+
+.processing {
+    background: white;
+    font-family: "Source Code Pro", Consolas, "Courier New", monospace;
+}
+
+.processing .code-w { color: black; }
+.processing .code-s { color: black; }
+.processing .code-a { color: black; }
+.processing .code-v { color: black; }
+.processing .code-c { color: green; }
+.processing .code-r { color: #33997e; }
+.processing .code-j { color: #669900; }
+.processing .code-t { color: #e2661a; }
+.processing .code-f { color: #006699; }
+.processing .code-d { color: black; }
+.processing .code-p { color: #d94a7a; }
+.processing .code-l { color: #7d4793; }
+.processing .code-q { color: #7d4793; }
+.processing .code-m { color: #006699; font-weight: bold; }
+
+.javascript .code-w { color: #dadada; }
+.javascript .code-s { color: #b4b4b4; }
+.javascript .code-a { color: #9a9a9a; }
+.javascript .code-v { color: #9cdcfe; }
+.javascript .code-c { color: #57a64a; }
+.javascript .code-r { color: #569cd6; }
+.javascript .code-j { color: #d8a0df; }
+.javascript .code-t { color: #4ec9b0; }
+.javascript .code-f { color: #dcdcaa; }
+.javascript .code-d { color: #b5cea8; }
+.javascript .code-p { color: #569cd6; }
+.javascript .code-l { color: #d69d85; }
+.javascript .code-q { color: #d69d85; }
+
+:root.light .javascript .code-w { color: black; }
+:root.light .javascript .code-s { color: black; }
+:root.light .javascript .code-a { color: gray; }
+:root.light .javascript .code-v { color: #1f377f; }
+:root.light .javascript .code-c { color: green; }
+:root.light .javascript .code-r { color: blue; }
+:root.light .javascript .code-j { color: #8f08c4; }
+:root.light .javascript .code-t { color: #2b91af; }
+:root.light .javascript .code-f { color: #74531f; }
+:root.light .javascript .code-d { color: #098658; }
+:root.light .javascript .code-p { color: blue; }
+:root.light .javascript .code-l { color: #a31515; }
+:root.light .javascript .code-q { color: #e21f1f; }

@@ -1,0 +1,66 @@
+---
+import type { ArticleMetadata } from '../lib/article_loader';
+
+interface Props {
+    cards: ArticleMetadata[];
+}
+
+const { cards } = Astro.props;
+---
+
+<div class="card-list">
+    {
+        cards.map((card) => (
+            <a href={`/${card.slug}`} class="card">
+                {card.thumbnail ? (
+                    <img src={`/${card.thumbnail}`} class="card-thumbnail" alt={card.title} />
+                ) : null}
+                <div>
+                    <p class="card-title">{card.title}</p>
+                    <p class="card-date">{card.date}</p>
+                </div>
+            </a>
+        ))
+    }
+</div>
+
+<style>
+    .card-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .card {
+        display: flex;
+        border-radius: 0.75rem;
+        padding: 0.5rem;
+        margin-left: -0.5rem;
+        text-decoration: none;
+    }
+
+    .card-thumbnail {
+        margin-right: 1rem;
+        aspect-ratio: 16 / 9;
+        width: 14.5rem;
+        min-width: 14.5rem;
+        border-radius: 0.5rem;
+        object-fit: cover;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin: 0 0 0.25rem;
+    }
+
+    .card:hover .card-title {
+        text-decoration: underline;
+    }
+
+    .card-date {
+        font-size: 1.125rem;
+        font-weight: bold;
+        margin: 0;
+    }
+</style>

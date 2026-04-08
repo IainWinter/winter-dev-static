@@ -1,0 +1,32 @@
+---
+interface Props {
+    id: string;
+    text: string;
+}
+
+const { id, text } = Astro.props;
+---
+
+<h2 id={id} class="sub-title mark-section">
+    {text}
+    <a href={`#${id}`} class="anchor-link">#</a>
+</h2>
+
+<style>
+    .sub-title {
+        font-size: 1.875rem;
+        font-weight: 600;
+        margin: 1.5rem 0;
+    }
+
+    .anchor-link {
+        opacity: 0.3;
+        margin-left: 1rem;
+        text-decoration: none;
+        transition: opacity 0.2s;
+    }
+
+    .anchor-link:hover {
+        opacity: 0.9;
+    }
+</style>

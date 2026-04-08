@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageTitle from '../components/PageTitle.astro';
+import CardList from '../components/CardList.astro';
+import { getArticles } from '../lib/article_loader';
+
+const articles = getArticles();
+---
+
+<Layout title="Winter">
+    <PageTitle title="Articles" />
+    <CardList cards={articles} />
+</Layout>

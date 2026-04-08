@@ -1,0 +1,238 @@
+---
+import temml from 'temml';
+import { renderArticle } from '../lib/article_renderer/render_article';
+import { renderCode } from '../lib/article_renderer/render_code';
+import type { ArticleBlock } from '../lib/article_renderer/article_blocks';
+import { loadFile } from '@/lib/file_loader';
+
+interface Props {
+    content: string;
+}
+
+const { content } = Astro.props;
+const blocks = renderArticle(content);
+
+function getYoutubeId(url: string): string {
+    const questionIndex = url.indexOf('?');
+    const endIndex = questionIndex === -1 ? url.length : questionIndex;
+    return url.substring(url.lastIndexOf('/') + 1, endIndex);
+}
+
+function escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderBlock(block: ArticleBlock): string {
+    switch (block.type) {
+        case 'text-open':
+            return `<p>`;
+        
+        case 'text':
+            return `${block.text}`;
+
+        case 'text-close':
+            return `</p>`;
+
+        case 'title':
+            return `<p class="article-page-title">${escapeHtml(block.text)}</p>`;
+
+        case 'sub-title':
+            return `<h2 id="${escapeHtml(block.id)}" class="article-subtitle mark-section">${escapeHtml(block.text)}<a href="#${escapeHtml(block.id)}" class="article-subtitle-id-link">#</a></h2>`;
+
+        case 'sub-title2':
+            return `<h3 class="article-sub-title2">${escapeHtml(block.text)}</h3>`;
+
+        case 'link':
+            return `<a href="${escapeHtml(block.href)}" target="_blank" rel="noopener noreferrer" class="article-link">${escapeHtml(block.text)}</a>`;
+
+        case 'image': {
+            const cls = block.half ? 'article-embed article-embed-no-height-limit article-embed-half' : 'article-embed article-embed-no-height-limit';
+            return `<img src="${escapeHtml(block.src)}" alt="" class="${cls}" />`;
+        }
+
+        case 'svg': {
+            const svg = loadFile(block.src);
+            const cls = block.half ? 'article-embed article-embed-no-height-limit article-embed-half' : 'article-embed article-embed-no-height-limit';
+            return `<div class="${cls}">${svg}</div>`;
+        }
+
+        case 'iframe':
+            return `<iframe src="${escapeHtml(block.src)}" loading="lazy" class="article-embed"></iframe>`;
+
+        case 'youtube': {
+            const id = getYoutubeId(block.src);
+            const thumb = `/thumbnails/${id}.jpg`;
+            const embed = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&autoplay=1`;
+            return `<div class="article-embed article-embed-thumb" data-embed="${escapeHtml(embed)}"><img src="${escapeHtml(thumb)}" alt="YouTube video thumbnail" /><span class="article-embed-thumb-yt-icon"></span></div>`;
+        }
+
+        case 'code': {
+            const code = renderCode(block.code, block.language);
+            const showTitle = block.filename && !block.filename.endsWith('_');
+            return `<div class="article-code mark-section-draw-line">${showTitle ? `<p class="article-code-file mark-section">${escapeHtml(block.filename!)}</p>` : ''}<pre class="${escapeHtml(block.language)} article-code-text">${code}</pre></div>`;
+        }
+
+        case 'equation': {
+            const mathML = temml.renderToString(block.latex, { annotate: true, throwOnError: true });
+            return block.inline
+                ? `<span class="article-equation-inline">${mathML}</span>`
+                : `<div class="article-equation">${mathML}</div>`;
+        }
+
+        case 'br':
+            return '<br/><br/>';
+
+        default:
+            return '';
+    }
+}
+
+const articleHtml = blocks.map(renderBlock);
+---
+
+<article set:html={articleHtml} />
+
+<script>
+    function setupEmbeds() {
+        document.querySelectorAll<HTMLElement>('.article-embed-thumb').forEach((el) => {
+            el.addEventListener('click', () => {
+                const iframe = document.createElement('iframe');
+                iframe.src = el.dataset.embed!;
+                iframe.allowFullscreen = true;
+                iframe.className = 'article-embed';
+                el.replaceWith(iframe);
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupEmbeds);
+    document.addEventListener('astro:page-load', setupEmbeds); 
+</script>
+
+<style is:global>
+    article {
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+
+    article .article-page-title {
+        font-size: 3rem;
+        margin-top: 0;
+        margin-bottom: 1.75rem;
+    }
+
+    @media (min-width: 640px) {
+        article .article-page-title {
+            margin-bottom: 3.5rem;
+        }
+    }
+
+    article .article-subtitle {
+        font-size: 32px;
+    }
+
+    article .article-subtitle-id-link {
+        opacity: 0.3;
+        margin-left: 1rem;
+        text-decoration: none;
+    }
+
+    article .article-subtitle-id-link:hover {
+        opacity: 0.9;
+    }
+
+    article .article-sub-title2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 1rem 0;
+    }
+
+    article .article-link {
+        color: var(--color-link);
+        text-decoration: underline;
+        margin: 1rem 0;
+        font-weight: bold;
+        font-size: 1.25rem;
+    }
+
+    article .article-embed {
+        border: none;
+        width: 100%;
+        aspect-ratio: auto 16 / 9;
+        position: relative;
+        margin: 0 auto;
+        display: block;
+    }
+
+    article .article-embed-half {
+        width: 55%;
+    }
+
+    article .article-embed-no-height-limit {
+        aspect-ratio: unset;
+    }
+
+    article .article-embed-thumb img {
+        width: inherit;
+        aspect-ratio: 16 / 9;
+    }
+
+    article .article-embed-thumb {
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+    }
+
+    article .article-embed-thumb-yt-icon:after {
+        --size_x: 68px;
+        --size_y: 48px;
+        content: "";
+        background-image: var(--youtube-icon);
+        left: 15px;
+        bottom: 20px;
+        z-index: 2;
+        pointer-events: none;
+        position: absolute;
+        width: var(--size_x);
+        height: var(--size_y);
+    }
+
+    article .article-code {
+        font-size: 16px;
+        font-weight: 400;
+        margin: 1em 0px;
+    }
+
+    article .article-code-file {
+        padding: 10px;
+        margin-bottom: 10px;
+        background: var(--accent-color-light);
+    }
+
+    article .article-code-text {
+        margin: 0;
+        padding-bottom: 1em;
+        overflow-x: auto;
+        tab-size: 5;
+    }
+
+    article .article-code-text::-webkit-scrollbar {
+        display: none;
+    }
+
+    article .article-equation {
+        font-size: 28px;
+        text-align: center;
+        color: var(--color-text);
+    }
+
+    article .article-equation-inline {
+        font-size: 16px;
+    }
+
+    @media (max-width: 500px) {
+        article .math-display {
+            font-size: 5vw;
+        }
+    }
+</style>

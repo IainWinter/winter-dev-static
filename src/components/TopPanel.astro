@@ -1,0 +1,122 @@
+---
+---
+
+<div class="top-panel" transition:persist="top-panel">
+    <p class="site-title">Winter</p>
+    <div class="nav-bar">
+        <nav class="nav-links">
+            <a href="/">Articles</a>
+            <a href="/regolith">Regolith</a>
+            <a href="/support">Support</a>
+        </nav>
+        <div class="nav-separator"></div>
+        <button id="theme-btn" class="theme-btn" aria-label="Toggle theme">
+            <img class="theme-icon" alt="theme toggle" />
+        </button>
+    </div>
+    <img src="/icons/mark.png" class="site-mark" alt="" />
+</div>
+
+<script>
+    const btn = document.getElementById('theme-btn');
+    btn?.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        const next = isDark ? 'light' : 'dark';
+        document.documentElement.classList.remove('dark', 'light');
+        document.documentElement.classList.add(next);
+        localStorage.setItem('theme', next);
+    });
+
+    document.addEventListener('astro:before-preparation', () => {
+        const navLinks = document.querySelector('.nav-links');
+        if (!navLinks?.matches(':hover')) return;
+        navLinks.querySelectorAll('a').forEach((link) => {
+            const a = link as HTMLElement;
+            a.style.transition = 'none';
+            a.style.opacity = getComputedStyle(a).opacity;
+        });
+    });
+
+    document.addEventListener('astro:after-swap', () => {
+        const links = document.querySelectorAll<HTMLElement>('.nav-links a');
+        setTimeout(() => {
+            links.forEach((a) => {
+                a.style.opacity = '';
+                a.style.transition = '';
+            });
+        }, 250); // stupid random number seems to be right
+    });
+</script>
+
+<style>
+    .top-panel {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .site-title {
+        font-size: 4.5rem;
+        margin: 1.75rem auto;
+        text-align: center;
+    }
+
+    @media (min-width: 640px) {
+        .site-title {
+            margin: 3.5rem auto;
+        }
+    }
+
+    .nav-bar {
+        display: flex;
+        gap: 1.25rem;
+        font-size: 1.5rem;
+        margin: 0 auto;
+        align-items: center;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 1.25rem;
+    }
+
+    .nav-links:hover a:not(:hover) {
+        opacity: 0.3;
+    }
+
+    .nav-links a {
+        text-decoration: none;
+        transition: opacity 0.3s;
+    }
+
+    .nav-separator {
+        border-left: 1px solid #d4d4d4;
+        height: 1.5em;
+    }
+
+    .theme-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    .theme-icon {
+        width: 1.75rem;
+        display: block;
+    }
+
+    .site-mark {
+        image-rendering: pixelated;
+        display: block;
+        margin: 1.75rem auto;
+        width: 3rem;
+    }
+
+    @media (min-width: 640px) {
+        .site-mark {
+            margin: 3.5rem auto;
+        }
+    }
+</style>
