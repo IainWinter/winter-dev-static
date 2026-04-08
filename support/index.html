@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Support - Winter</title><link rel="icon" href="/favicon.ico"><link rel="preload" href="/fonts/NanumMyeongjo400.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/NanumMyeongjo700.woff2" as="font" type="font/woff2" crossorigin><meta name="astro-view-transitions-enabled" content="true"><meta name="astro-view-transitions-fallback" content="animate"><script type="module" src="/_astro/ClientRouter.astro_astro_type_script_index_0_lang.j56hQv-j.js"></script><script>
+            function applyTheme() {
+                const theme = localStorage.getItem('theme') || 'dark';
+                document.documentElement.classList.remove('dark', 'light');
+                document.documentElement.classList.add(theme);
+            }
+
+            applyTheme();
+            document.addEventListener('astro:after-swap', applyTheme);
+        </script><link rel="stylesheet" href="/_astro/Layout.BY8aLJR1.css">
+<style>.page-title[data-astro-cid-guvttfii]{font-size:3rem;margin:0 0 1.75rem}@media(min-width:640px){.page-title[data-astro-cid-guvttfii]{margin:0 0 3.5rem}}
+.sub-title[data-astro-cid-n3qa66mr]{font-size:1.875rem;font-weight:600;margin:1.5rem 0}.anchor-link[data-astro-cid-n3qa66mr]{opacity:.3;margin-left:1rem;text-decoration:none;transition:opacity .2s}.anchor-link[data-astro-cid-n3qa66mr]:hover{opacity:.9}.comment-frame[data-astro-cid-fdrkzv5s]{margin-left:-15px;width:calc(100% + 15px);border:none;display:block}
+</style></head> <body> <div class="page-container"> <div class="top-panel" data-astro-transition-persist="top-panel" data-astro-cid-poj62q4f> <p class="site-title" data-astro-cid-poj62q4f>Winter</p> <div class="nav-bar" data-astro-cid-poj62q4f> <nav class="nav-links" data-astro-cid-poj62q4f> <a href="/" data-astro-cid-poj62q4f>Articles</a> <a href="/regolith" data-astro-cid-poj62q4f>Regolith</a> <a href="/support" data-astro-cid-poj62q4f>Support</a> </nav> <div class="nav-separator" data-astro-cid-poj62q4f></div> <button id="theme-btn" class="theme-btn" aria-label="Toggle theme" data-astro-cid-poj62q4f> <img class="theme-icon" alt="theme toggle" data-astro-cid-poj62q4f> </button> </div> <img src="/icons/mark.png" class="site-mark" alt="" data-astro-cid-poj62q4f> </div> <script type="module">const o=document.getElementById("theme-btn");o?.addEventListener("click",()=>{const t=document.documentElement.classList.contains("dark")?"light":"dark";document.documentElement.classList.remove("dark","light"),document.documentElement.classList.add(t),localStorage.setItem("theme",t)});document.addEventListener("astro:before-preparation",()=>{const e=document.querySelector(".nav-links");e?.matches(":hover")&&e.querySelectorAll("a").forEach(t=>{const n=t;n.style.transition="none",n.style.opacity=getComputedStyle(n).opacity})});document.addEventListener("astro:after-swap",()=>{const e=document.querySelectorAll(".nav-links a");setTimeout(()=>{e.forEach(t=>{t.style.opacity="",t.style.transition=""})},250)});</script>  <p class="page-title" data-astro-cid-guvttfii>Support</p> <h2 id="comments" class="sub-title mark-section" data-astro-cid-n3qa66mr> Comments <a href="#comments" class="anchor-link" data-astro-cid-n3qa66mr>#</a> </h2> <div id="comment-scroll-target" data-astro-cid-fdrkzv5s></div> <iframe id="comment-frame" scrolling="no" class="comment-frame" src="/external/comments.html?host=https://api.winter.dev/comments&#38;subject=support" data-astro-cid-fdrkzv5s></iframe> <script type="module">let s=null;function i(){s?.(),s=null;const e=document.getElementById("comment-frame");if(!e)return;const a=document.getElementById("comment-scroll-target"),o=new AbortController;function c(){return document.documentElement.classList.contains("dark")?"dark":"light"}function t(){e&&e.contentWindow?.postMessage({theme:c()},"*")}window.addEventListener("message",l=>{const n=l.data;if(!(!n||typeof n!="object"))switch(n.reason){case"setHeight":e.height=n.height;break;case"askTheme":t();break;case"setScrollToComments":a?.scrollIntoView();break}},{signal:o.signal}),e.addEventListener("load",t,{signal:o.signal}),t();const r=new MutationObserver(t);r.observe(document.documentElement,{attributes:!0,attributeFilter:["class"]}),s=()=>{o.abort(),r.disconnect()}}document.addEventListener("astro:page-load",i);</script>  </div> <script>
+            function setHasScrollbar() {
+                const scrollbarWidth = Math.max(window.innerWidth - document.documentElement.clientWidth - 1, 0);
+                document.body.style.paddingLeft = `${scrollbarWidth}px`;
+            }
+
+            setHasScrollbar();
+
+            document.addEventListener('astro:after-swap', () => {
+                setHasScrollbar();
+            });
+        </script> </body> </html>

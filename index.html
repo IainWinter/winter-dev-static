@@ -1,108 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Winter</title><link rel="icon" href="/favicon.ico"><link rel="preload" href="/fonts/NanumMyeongjo400.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/NanumMyeongjo700.woff2" as="font" type="font/woff2" crossorigin><meta name="astro-view-transitions-enabled" content="true"><meta name="astro-view-transitions-fallback" content="animate"><script type="module" src="/_astro/ClientRouter.astro_astro_type_script_index_0_lang.j56hQv-j.js"></script><script>
+            function applyTheme() {
+                const theme = localStorage.getItem('theme') || 'dark';
+                document.documentElement.classList.remove('dark', 'light');
+                document.documentElement.classList.add(theme);
+            }
 
-<head>
-	<title>Articles</title>
-	<link rel="icon" type="image/x-icon" href="./favicon.ico">
-	
-	<meta charset="UTF-8">
-	<meta name="description" content="Winter's projects, game demos, and programming articles. Read about useful insights into C++ &amp; other game dev projects">
-	<meta name="keywords" content="Winter dev, Winter c++, winter coding, winter programming, winter blog, winters blog, winters programming, winters coding">
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
+            applyTheme();
+            document.addEventListener('astro:after-swap', applyTheme);
+        </script><link rel="stylesheet" href="/_astro/Layout.BY8aLJR1.css">
+<style>.page-title[data-astro-cid-guvttfii]{font-size:3rem;margin:0 0 1.75rem}@media(min-width:640px){.page-title[data-astro-cid-guvttfii]{margin:0 0 3.5rem}}
+.card-list[data-astro-cid-p3vyftr4]{display:flex;flex-direction:column;gap:.5rem}.card[data-astro-cid-p3vyftr4]{display:flex;border-radius:.75rem;padding:.5rem;margin-left:-.5rem;text-decoration:none}.card-thumbnail[data-astro-cid-p3vyftr4]{margin-right:1rem;aspect-ratio:16 / 9;width:14.5rem;min-width:14.5rem;border-radius:.5rem;object-fit:cover}.card-title[data-astro-cid-p3vyftr4]{font-size:1.25rem;font-weight:700;margin:0 0 .25rem}.card[data-astro-cid-p3vyftr4]:hover .card-title[data-astro-cid-p3vyftr4]{text-decoration:underline}.card-date[data-astro-cid-p3vyftr4]{font-size:1.125rem;font-weight:700;margin:0}
+</style></head> <body> <div class="page-container"> <div class="top-panel" data-astro-transition-persist="top-panel" data-astro-cid-poj62q4f> <p class="site-title" data-astro-cid-poj62q4f>Winter</p> <div class="nav-bar" data-astro-cid-poj62q4f> <nav class="nav-links" data-astro-cid-poj62q4f> <a href="/" data-astro-cid-poj62q4f>Articles</a> <a href="/regolith" data-astro-cid-poj62q4f>Regolith</a> <a href="/support" data-astro-cid-poj62q4f>Support</a> </nav> <div class="nav-separator" data-astro-cid-poj62q4f></div> <button id="theme-btn" class="theme-btn" aria-label="Toggle theme" data-astro-cid-poj62q4f> <img class="theme-icon" alt="theme toggle" data-astro-cid-poj62q4f> </button> </div> <img src="/icons/mark.png" class="site-mark" alt="" data-astro-cid-poj62q4f> </div> <script type="module">const o=document.getElementById("theme-btn");o?.addEventListener("click",()=>{const t=document.documentElement.classList.contains("dark")?"light":"dark";document.documentElement.classList.remove("dark","light"),document.documentElement.classList.add(t),localStorage.setItem("theme",t)});document.addEventListener("astro:before-preparation",()=>{const e=document.querySelector(".nav-links");e?.matches(":hover")&&e.querySelectorAll("a").forEach(t=>{const n=t;n.style.transition="none",n.style.opacity=getComputedStyle(n).opacity})});document.addEventListener("astro:after-swap",()=>{const e=document.querySelectorAll(".nav-links a");setTimeout(()=>{e.forEach(t=>{t.style.opacity="",t.style.transition=""})},250)});</script>  <p class="page-title" data-astro-cid-guvttfii>Articles</p> <div class="card-list" data-astro-cid-p3vyftr4> <a href="/articles/falling-sand-worlds" class="card" data-astro-cid-p3vyftr4> <img src="/thumbnails/vNcsPE_YdmA.jpg" class="card-thumbnail" alt="Making an infinite world with Falling Sand part 2" data-astro-cid-p3vyftr4> <div data-astro-cid-p3vyftr4> <p class="card-title" data-astro-cid-p3vyftr4>Making an infinite world with Falling Sand part 2</p> <p class="card-date" data-astro-cid-p3vyftr4>March 27, 2021</p> </div> </a><a href="/articles/falling-sand-simulations" class="card" data-astro-cid-p3vyftr4> <img src="/thumbnails/wZJCQQPaGZI.jpg" class="card-thumbnail" alt="Making games with Falling Sand part 1" data-astro-cid-p3vyftr4> <div data-astro-cid-p3vyftr4> <p class="card-title" data-astro-cid-p3vyftr4>Making games with Falling Sand part 1</p> <p class="card-date" data-astro-cid-p3vyftr4>December 30, 2020</p> </div> </a><a href="/articles/epa-algorithm" class="card" data-astro-cid-p3vyftr4> <img src="/thumbnails/0XQ2FSz3EK8.jpg" class="card-thumbnail" alt="EPA: Collision response algorithm for 2D/3D" data-astro-cid-p3vyftr4> <div data-astro-cid-p3vyftr4> <p class="card-title" data-astro-cid-p3vyftr4>EPA: Collision response algorithm for 2D/3D</p> <p class="card-date" data-astro-cid-p3vyftr4>November 17, 2020</p> </div> </a><a href="/articles/gjk-algorithm" class="card" data-astro-cid-p3vyftr4> <img src="/thumbnails/MDusDn8oTSE.jpg" class="card-thumbnail" alt="GJK: Collision detection algorithm in 2D/3D" data-astro-cid-p3vyftr4> <div data-astro-cid-p3vyftr4> <p class="card-title" data-astro-cid-p3vyftr4>GJK: Collision detection algorithm in 2D/3D</p> <p class="card-date" data-astro-cid-p3vyftr4>August 29, 2020</p> </div> </a><a href="/articles/physics-engine" class="card" data-astro-cid-p3vyftr4> <img src="/thumbnails/-_IspRG548E.jpg" class="card-thumbnail" alt="Designing a physics engine" data-astro-cid-p3vyftr4> <div data-astro-cid-p3vyftr4> <p class="card-title" data-astro-cid-p3vyftr4>Designing a physics engine</p> <p class="card-date" data-astro-cid-p3vyftr4>July 31, 2020</p> </div> </a><a href="/articles/another-way" class="card" data-astro-cid-p3vyftr4>  <div data-astro-cid-p3vyftr4> <p class="card-title" data-astro-cid-p3vyftr4>Another way of programming, taking it slow</p> <p class="card-date" data-astro-cid-p3vyftr4>July 6, 2020</p> </div> </a> </div>  </div> <script>
+            function setHasScrollbar() {
+                const scrollbarWidth = Math.max(window.innerWidth - document.documentElement.clientWidth - 1, 0);
+                document.body.style.paddingLeft = `${scrollbarWidth}px`;
+            }
 
-	<link rel="preload" href="./styles/global.css" as="style" />
-	<link rel="preload" href="./styles/top.css" as="style" />
-	<link rel="preload" href="./styles/card.css" as="style" />
-	<link rel="preload" href="./fonts/NanumMyeongjo400.woff2" as="font" type="font/woff2" crossorigin />
-	<link rel="preload" href="./fonts/NanumMyeongjo700.woff2" as="font" type="font/woff2" crossorigin />
+            setHasScrollbar();
 
-	<link rel="stylesheet" href="./styles/global.css" />
-	<link rel="stylesheet" href="./styles/top.css" />
-	<link rel="stylesheet" href="./styles/card.css" />
-</head>
-
-
-		<script>
-			const g_exportRootPath = "./";
-			function ref(path) { return g_exportRootPath + path; }
-		</script>
-	
-<script src="./scripts/no_flashbang.js"></script>
-
-<body color-theme="dark">
-	<div class="main">
-		
-		<div class="top">
-			<h1 class="title" role="banner">Winter</h1>
-			<div class="nav-section" role="navigation">
-				<div class="nav-links">
-					<a class="nav-link" href="./articles">Articles</a>
-					<a class="nav-link" href="./projects">Projects</a>
-					<a class="nav-link" href="./support">Support</a>
-				</div>
-
-				<hr class="nav-separator" />
-
-				<div class="nav-buttons">
-					<img id="toggle-dark-icon" src="./icons/light_off.svg" alt="light/dark mode button" onclick="toggleDark();"/>
-				</div>
-			</div>
-		</div>
-		<script src="./scripts/toggle_dark.js"></script>
-	
-		<div class="page" role="main">
-			<h1 class="page-title">Articles</h1>
-			<div>
-		<div class="article-card">
-			<a href="./articles/falling-sand-worlds"><img class="article-card-thumb" src="./thumbnails/vNcsPE_YdmA.jpg" alt="A thumbnail for this article" /></a>
-			<div class="article-card-text">
-				<a class="article-card-text-link" href="./articles/falling-sand-worlds">Making an infinite world with Falling Sand part 2</a>
-				<p class="article-card-text-date">March 27, 2021</p>
-			</div>
-		</div>
-	
-		<div class="article-card">
-			<a href="./articles/falling-sand"><img class="article-card-thumb" src="./thumbnails/wZJCQQPaGZI.jpg" alt="A thumbnail for this article" /></a>
-			<div class="article-card-text">
-				<a class="article-card-text-link" href="./articles/falling-sand">Making games with Falling Sand part 1</a>
-				<p class="article-card-text-date">December 30, 2020</p>
-			</div>
-		</div>
-	
-		<div class="article-card">
-			<a href="./articles/epa-algorithm"><img class="article-card-thumb" src="./thumbnails/0XQ2FSz3EK8.jpg" alt="A thumbnail for this article" /></a>
-			<div class="article-card-text">
-				<a class="article-card-text-link" href="./articles/epa-algorithm">EPA: Collision response algorithm for 2D/3D</a>
-				<p class="article-card-text-date">November 17, 2020</p>
-			</div>
-		</div>
-	
-		<div class="article-card">
-			<a href="./articles/gjk-algorithm"><img class="article-card-thumb" src="./thumbnails/MDusDn8oTSE.jpg" alt="A thumbnail for this article" /></a>
-			<div class="article-card-text">
-				<a class="article-card-text-link" href="./articles/gjk-algorithm">GJK: Collision detection algorithm in 2D/3D</a>
-				<p class="article-card-text-date">August 29, 2020</p>
-			</div>
-		</div>
-	
-		<div class="article-card">
-			<a href="./articles/physics-engine"><img class="article-card-thumb" src="./thumbnails/-_IspRG548E.jpg" alt="A thumbnail for this article" /></a>
-			<div class="article-card-text">
-				<a class="article-card-text-link" href="./articles/physics-engine">Designing a physics engine</a>
-				<p class="article-card-text-date">July 31, 2020</p>
-			</div>
-		</div>
-	<hr class="article-cards-separator" />
-		<div class="article-card">
-			
-			<div class="article-card-text">
-				<a class="article-card-text-link" href="./articles/another-way">Another way of programming, taking it slow</a>
-				<p class="article-card-text-date">July 6, 2020</p>
-			</div>
-		</div>
-	</div>
-		</div>
-	</div>
-</body>
-
-</html>
+            document.addEventListener('astro:after-swap', () => {
+                setHasScrollbar();
+            });
+        </script> </body> </html>
