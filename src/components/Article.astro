@@ -47,7 +47,7 @@ function renderBlock(block: ArticleBlock): string {
 
         case 'image': {
             const cls = block.half ? 'article-embed article-embed-no-height-limit article-embed-half' : 'article-embed article-embed-no-height-limit';
-            return `<img src="${escapeHtml(block.src)}" alt="" class="${cls}" />`;
+            return `<img src="/articles/${escapeHtml(block.src)}" alt="" class="${cls}" />`;
         }
 
         case 'svg': {
@@ -57,7 +57,7 @@ function renderBlock(block: ArticleBlock): string {
         }
 
         case 'iframe':
-            return `<iframe src="${escapeHtml(block.src)}" loading="lazy" class="article-embed"></iframe>`;
+            return `<iframe src="/articles/${escapeHtml(block.src)}" loading="lazy" class="article-embed"></iframe>`;
 
         case 'youtube': {
             const id = getYoutubeId(block.src);
